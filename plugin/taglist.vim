@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 2.7
-" Last Modified: August 10, 2003
+" Version: 2.8
+" Last Modified: Sep 14, 2003
 "
 " Overview
 " --------
@@ -42,10 +42,16 @@
 "
 "       http://www.geocities.com/yegappan/taglist
 "
+" You can subscribe to the taglist mailing list to post your questions
+" or suggestions for improvement or bug reports. Visit the following
+" page for subscribing to the mailing list:
+"
+"       http://groups.yahoo.com/group/taglist/
+"
 " This plugin relies on the exuberant ctags utility to dynamically generate
 " the tag listing. You can download the exuberant ctags utility from
 "
-"               http://ctags.sourceforge.net
+"       http://ctags.sourceforge.net
 "
 " The exuberant ctags utility must be installed in your system to use this
 " plugin. You should use exuberant ctags version 5.0 and above.  This plugin
@@ -276,6 +282,13 @@
 "
 "               let Tlist_Display_Prototype = 1
 "
+" By default, the scope of a tag (like a C++ class) will be displayed in
+" square brackets next to the tag name. If you don't want the tag scopes
+" to be displayed, then set the Tlist_Display_Tag_Scope to 0. By default,
+" this variable is set to 1 and the tag scopes will be displayed.
+"
+"               let Tlist_Display_Tag_Scope = 0
+"
 " The default width of the vertically split taglist window will be 30.  This
 " can be changed by modifying the Tlist_WinWidth variable:
 "
@@ -439,6 +452,11 @@ if !exists('Tlist_Display_Prototype')
     let Tlist_Display_Prototype = 0
 endif
 
+" Display tag scopes in the taglist window
+if !exists('Tlist_Display_Tag_Scope')
+    let Tlist_Display_Tag_Scope = 1
+endif
+
 " Use single left mouse click to jump to a tag. By default this is disabled.
 " Only double click using the mouse will be processed.
 if !exists('Tlist_Use_SingleClick')
@@ -574,7 +592,7 @@ let s:tlist_def_vim_settings = 'vim;a:autocmds;v:variable;f:function'
 " yacc language
 let s:tlist_def_yacc_settings = 'yacc;l:label'
 
-" Initialize the taglist script local variables for the supported file types
+" Initialize the taglist plugin local variables for the supported file types
 " and tag types
 let s:tlist_winsize_chgd = 0
 let s:tlist_win_maximized = 0
@@ -1296,15 +1314,17 @@ function! s:Tlist_Explore_File(bufnum)
             if g:Tlist_Display_Prototype == 0
                 let ttxt = '  ' . strpart(one_line, 0, stridx(one_line, "\t"))
 
-                " Add the tag scope, if it is available. Tag scope is the last
-                " field after the 'line:<num>\t' field
-                let start = strridx(one_line, 'line:')
-                let end = strridx(one_line, "\t")
-                if end > start
-                    let tscope = strpart(one_line, end + 1)
-                    let tscope = strpart(tscope, stridx(tscope, ':') + 1)
-                    if tscope != ''
-                        let ttxt = ttxt . ' [' . tscope . ']'
+                if g:Tlist_Display_Tag_Scope     " only if it is selected
+                    " Add the tag scope, if it is available. Tag scope is the last
+                    " field after the 'line:<num>\t' field
+                    let start = strridx(one_line, 'line:')
+                    let end = strridx(one_line, "\t")
+                    if end > start
+                        let tscope = strpart(one_line, end + 1)
+                        let tscope = strpart(tscope, stridx(tscope, ':') + 1)
+                        if tscope != ''
+                            let ttxt = ttxt . ' [' . tscope . ']'
+                        endif
                     endif
                 endif
             else
