@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 3.3
-" Last Modified: May 26, 2004
+" Version: 3.4
+" Last Modified: August 15, 2004
 "
 " The "Tag List" plugin is a source code browser plugin for Vim and
 " provides an overview of the structure of source code files and allows
@@ -49,7 +49,7 @@
 if exists('loaded_taglist') || &cp
     finish
 endif
-let loaded_taglist=1
+let loaded_taglist='yes'
 
 " Location of the exuberant ctags tool
 if !exists('Tlist_Ctags_Cmd')
@@ -57,14 +57,20 @@ if !exists('Tlist_Ctags_Cmd')
         let Tlist_Ctags_Cmd = 'exuberant-ctags'
     elseif executable('ctags')
         let Tlist_Ctags_Cmd = 'ctags'
+    elseif executable('ctags.exe')
+        let Tlist_Ctags_Cmd = 'ctags.exe'
     elseif executable('tags')
         let Tlist_Ctags_Cmd = 'tags'
     else
-        echomsg 'Taglist: Exuberant ctags not found in PATH. ' .
-                    \ 'Plugin is not loaded.'
+        echomsg 'Taglist: Exuberant ctags (http://ctags.sf.net) ' .
+		    \ 'not found in PATH. Plugin is not loaded.'
+	" Taglist plugin functionality is not available
         finish
     endif
 endif
+
+" Taglist plugin functionality is available
+let loaded_taglist = 'available'
 
 " Tag listing sort type - 'name' or 'order'
 if !exists('Tlist_Sort_Type')
@@ -155,6 +161,11 @@ endif
 " Enable fold column to display the folding for the tag tree
 if !exists('Tlist_Enable_Fold_Column')
     let Tlist_Enable_Fold_Column = 1
+endif
+
+" Display the tags for only one file in the taglist window
+if !exists('Tlist_Show_One_File')
+    let Tlist_Show_One_File = 0
 endif
 
 "------------------- end of user configurable options --------------------
@@ -302,6 +313,9 @@ let s:tlist_ftype_count = 0
 let s:tlist_app_name = "none"
 " Are we displaying brief help text
 let s:tlist_brief_help = 1
+" List of files deleted on user request
+let s:tlist_deleted_flist = ""
+let s:tlist_cur_file_idx = -1
 " Do not change the name of the taglist title variable. The winmanager plugin
 " relies on this name to determine the title for the taglist plugin.
 let TagList_title = "__Tag_List__"
@@ -440,6 +454,11 @@ endfunction
 " Tlist_Skip_File()
 " Check whether tag listing is supported for the specified file
 function! s:Tlist_Skip_File(filename, ftype)
+    " Skip buffers with no names
+    if a:filename == ''
+        return 1
+    endif
+
     " Skip buffers with filetype not set
     if a:ftype == ''
         return 1
@@ -456,11 +475,6 @@ function! s:Tlist_Skip_File(filename, ftype)
         if !exists(var)
             return 1
         endif
-    endif
-
-    " Skip buffers with no names
-    if a:filename == ''
-        return 1
     endif
 
     " Skip files which are not readable or files which are not yet stored
@@ -662,6 +676,11 @@ endfunction
 " Tlist_Remove_File_From_Display
 " Remove the specified file from display
 function! s:Tlist_Remove_File_From_Display(fidx)
+    " If the file is not visible then no need to remove it
+    if !s:tlist_{a:fidx}_visible
+        return
+    endif
+
     " Remove the tags displayed for the specified file from the window
     let start = s:tlist_{a:fidx}_start
     " Include the empty line after the last line also
@@ -672,9 +691,7 @@ function! s:Tlist_Remove_File_From_Display(fidx)
     endif
 
     setlocal modifiable
-
     exe 'silent! ' . start . ',' . end . 'delete _'
-
     setlocal nomodifiable
 
     " Correct the start and end line offsets for all the files following
@@ -684,7 +701,8 @@ endfunction
 
 " Tlist_Remove_File
 " Remove the file under the cursor or the specified file index
-function! s:Tlist_Remove_File(file_idx)
+" user_request - User requested to remove the file from taglist
+function! s:Tlist_Remove_File(file_idx, user_request)
     let fidx = a:file_idx
 
     if fidx == -1
@@ -695,6 +713,13 @@ function! s:Tlist_Remove_File(file_idx)
     endif
 
     call s:Tlist_Remove_File_From_Display(fidx)
+
+    if a:user_request
+        " As the user requested to remove the file from taglist,
+        " add it to the removed list
+        let s:tlist_deleted_flist = s:tlist_deleted_flist . 
+                                    \ s:tlist_{fidx}_filename . "\n"
+    endif
 
     call s:Tlist_Discard_FileInfo(fidx)
 
@@ -747,18 +772,20 @@ function! s:Tlist_Remove_File(file_idx)
 
     " Reduce the number of files displayed
     let s:tlist_file_count = s:tlist_file_count - 1
+
+    if g:Tlist_Show_One_File
+        " If the tags for only one file are displayed and if we just
+        " now removed the file, then invalidate the current file idx
+        if s:tlist_cur_file_idx == fidx
+            let s:tlist_cur_file_idx = -1
+        endif
+    endif
 endfunction
 
 
 " Tlist_Open_Window
 " Create a new taglist window. If it is already open, jump to it
 function! s:Tlist_Open_Window()
-    " If used with winmanager don't open windows. Winmanager will handle
-    " the window/buffer management
-    if s:tlist_app_name == "winmanager"
-        return
-    endif
-
     " If the window is open, jump to it
     let winnum = bufwinnr(g:TagList_title)
     if winnum != -1
@@ -766,6 +793,12 @@ function! s:Tlist_Open_Window()
         if winnr() != winnum
             exe winnum . 'wincmd w'
         endif
+        return
+    endif
+
+    " If used with winmanager don't open windows. Winmanager will handle
+    " the window/buffer management
+    if s:tlist_app_name == "winmanager"
         return
     endif
 
@@ -812,6 +845,9 @@ function! s:Tlist_Open_Window()
 
     " Create the taglist window
     exe 'silent! ' . win_dir . ' ' . win_size . 'split ' . wcmd
+
+    " Initialize the taglist window
+    call s:Tlist_Init_Window()
 endfunction
 
 " Tlist_Zoom_Window
@@ -937,7 +973,7 @@ function! s:Tlist_Init_Window()
     nnoremap <buffer> <silent> <kMultiply> :silent! %foldopen!<CR>
     nnoremap <buffer> <silent> <Space> :call <SID>Tlist_Show_Tag_Prototype()<CR>
     nnoremap <buffer> <silent> u :call <SID>Tlist_Update_Window()<CR>
-    nnoremap <buffer> <silent> d :call <SID>Tlist_Remove_File(-1)<CR>
+    nnoremap <buffer> <silent> d :call <SID>Tlist_Remove_File(-1, 1)<CR>
     nnoremap <buffer> <silent> x :call <SID>Tlist_Zoom_Window()<CR>
     nnoremap <buffer> <silent> [[ :call <SID>Tlist_Move_To_File(-1)<CR>
     nnoremap <buffer> <silent> ]] :call <SID>Tlist_Move_To_File(1)<CR>
@@ -963,7 +999,7 @@ function! s:Tlist_Init_Window()
     inoremap <buffer> <silent> <Space>       <C-o>:call 
                                     \ <SID>Tlist_Show_Tag_Prototype()<CR>
     inoremap <buffer> <silent> u    <C-o>:call <SID>Tlist_Update_Window()<CR>
-    inoremap <buffer> <silent> d    <C-o>:call <SID>Tlist_Remove_File(-1)<CR>
+    inoremap <buffer> <silent> d    <C-o>:call <SID>Tlist_Remove_File(-1, 1)<CR>
     inoremap <buffer> <silent> x    <C-o>:call <SID>Tlist_Zoom_Window()<CR>
     inoremap <buffer> <silent> [[   <C-o>:call <SID>Tlist_Move_To_File(-1)<CR>
     inoremap <buffer> <silent> ]]   <C-o>:call <SID>Tlist_Move_To_File(1)<CR>
@@ -971,9 +1007,26 @@ function! s:Tlist_Init_Window()
     inoremap <buffer> <silent> q    <C-o>:close<CR>
 
     " Map single left mouse click if the user wants this functionality
-    if g:Tlist_Use_SingleClick
-    nnoremap <silent> <LeftMouse> <LeftMouse>:if bufname("%") =~ "__Tag_List__"
-                        \ <bar> call <SID>Tlist_Jump_To_Tag(0) <bar> endif <CR>
+    if g:Tlist_Use_SingleClick == 1
+        " Contributed by Bindu Wavell
+	" attempt to perform single click mapping, it would be much
+	" nicer if we could nnoremap <buffer> ... however vim does
+	" not fire the <buffer> <leftmouse> when you use the mouse
+	" to enter a buffer.
+	let clickmap = ':if bufname("%") =~ "__Tag_List__" <bar> ' .
+		    \ 'call <SID>Tlist_Jump_To_Tag(0) <bar> endif <CR>'
+	if maparg('<leftmouse>', 'n') == ''
+	    " no mapping for leftmouse
+	    exe ':nnoremap <silent> <leftmouse> <leftmouse>' . clickmap
+	else
+	    " we have a mapping
+	    let  mapcmd = ':nnoremap <silent> <leftmouse> <leftmouse>'
+	    let  mapcmd = mapcmd . substitute(substitute(
+			\ maparg('<leftmouse>', 'n'), '|', '<bar>', 'g'), 
+			\ '\c^<leftmouse>', '', '')
+	    let  mapcmd = mapcmd . clickmap
+	    exe mapcmd
+	endif
     endif
 
     " Define the taglist autocommands
@@ -1026,22 +1079,28 @@ function! s:Tlist_Refresh_Window()
     " Restore the report option
     let &report = old_report
 
-    " List all the tags for the previously processed files
-    let i = 0
-    while i < s:tlist_file_count
-        " Mark the file as not visible, so that Tlist_Explore_File() will
-        " display the tags for this file and mark the file as visible
-        let s:tlist_{i}_visible = 0
-        call s:Tlist_Explore_File(s:tlist_{i}_filename, s:tlist_{i}_filetype)
-        let i = i + 1
-    endwhile
+    if !g:Tlist_Show_One_File
+        " List all the tags for the previously processed files
+        " Do this only if taglist is configured to display tags for more than
+        " one file. Otherwise, when Tlist_Show_One_File is configured,
+        " tags for the wrong file will be displayed.
+        let i = 0
+        while i < s:tlist_file_count
+            " Mark the file as not visible, so that Tlist_Explore_File() will
+            " display the tags for this file and mark the file as visible
+            let s:tlist_{i}_visible = 0
+            call s:Tlist_Explore_File(s:tlist_{i}_filename, 
+                        \ s:tlist_{i}_filetype)
+            let i = i + 1
+        endwhile
 
-    " If Tlist_File_Fold_Auto_Close option is set, then close all the 
-    " folds
-    if g:Tlist_File_Fold_Auto_Close
-        if has('folding')
-            " Close all the folds
-            silent! %foldclose
+        " If Tlist_File_Fold_Auto_Close option is set, then close all the 
+        " folds
+        if g:Tlist_File_Fold_Auto_Close
+            if has('folding')
+                " Close all the folds
+                silent! %foldclose
+            endif
         endif
     endif
 endfunction
@@ -1119,6 +1178,15 @@ function! s:Tlist_Explore_File(filename, ftype)
         let file_exists = 0
     endif
 
+    if !file_exists
+        " Check whether this file is removed based on user request
+        " If it is, then don't display the tags for this file
+        let esc_fname = escape(a:filename, '\') . "\n"
+        if match(s:tlist_deleted_flist, esc_fname) != -1
+            return
+        endif
+    endif
+
     if file_exists && s:tlist_{fidx}_visible
         " Check whether the file tags are currently valid
         if s:tlist_{fidx}_valid
@@ -1151,6 +1219,17 @@ function! s:Tlist_Explore_File(filename, ftype)
     " while adding lines to the taglist window
     let old_report = &report
     set report=99999
+
+    if g:Tlist_Show_One_File
+        " Remove the previous file
+        if s:tlist_cur_file_idx != -1
+            call s:Tlist_Remove_File_From_Display(s:tlist_cur_file_idx)
+            let s:tlist_{s:tlist_cur_file_idx}_visible = 0
+            let s:tlist_{s:tlist_cur_file_idx}_start = 0
+            let s:tlist_{s:tlist_cur_file_idx}_end = 0
+        endif
+        let s:tlist_cur_file_idx = fidx
+    endif
 
     " Mark the buffer as modifiable
     setlocal modifiable
@@ -1456,6 +1535,13 @@ function! Tlist_Update_File_Tags(filename, ftype)
     if fidx != -1 && s:tlist_{fidx}_valid
         " File exists and the tags are valid
         return
+    else
+        " Check whether this file is removed based on user request
+        " If it is, then don't display the tags for this file
+        let esc_fname = escape(a:filename, '\') . "\n"
+        if match(s:tlist_deleted_flist, esc_fname) != -1
+            return
+        endif
     endif
 
     " If the taglist window is opened, update it
@@ -1541,18 +1627,28 @@ function! s:Tlist_Toggle_Window()
     " Open the taglist window
     call s:Tlist_Open_Window()
 
-    " Initialize the taglist window
-    call s:Tlist_Init_Window()
     call s:Tlist_Refresh_Window()
 
-    " Add and list the tags for all the buffers in the bufferlist
-    let i = 1
-    while i < bufnr('$')
-        let fname = fnamemodify(bufname(i), ':p')
-        let ftype = getbufvar(i, '&filetype')
-        call s:Tlist_Explore_File(fname, ftype)
-        let i = i + 1
-    endwhile
+    if g:Tlist_Show_One_File
+        " Add only the current buffer and file
+        "
+        " If the file doesn't support tag listing, skip it
+        if !s:Tlist_Skip_File(curbuf_name, curbuf_ftype)
+            call s:Tlist_Explore_File(curbuf_name, curbuf_ftype)
+        endif
+    else
+        " Add and list the tags for all the buffers in the bufferlist
+        let i = 1
+        while i < bufnr('$')
+            let fname = fnamemodify(bufname(i), ':p')
+            let ftype = getbufvar(i, '&filetype')
+            " If the file doesn't support tag listing, skip it
+            if !s:Tlist_Skip_File(fname, ftype)
+                call s:Tlist_Explore_File(fname, ftype)
+            endif
+            let i = i + 1
+        endwhile
+    endif
 
     " Highlight the current tag
     call s:Tlist_Highlight_Tag(curbuf_name, curline, 1)
@@ -1658,16 +1754,18 @@ function! s:Tlist_Refresh()
             let s:tlist_{fidx}_mtime = mtime
         endif
 
-        " If the tag listing for the current window is already present, no
-        " need to refresh it
-        if !g:Tlist_Auto_Highlight_Tag
+        if s:tlist_{fidx}_visible
+            " If the tag listing for the current window is already present, no
+            " need to refresh it
+            if !g:Tlist_Auto_Highlight_Tag
+                return
+            endif
+
+            " Highlight the current tag
+            call s:Tlist_Highlight_Tag(filename, curline, 1)
+
             return
         endif
-
-        " Highlight the current tag
-        call s:Tlist_Highlight_Tag(filename, curline, 1)
-
-        return
     endif
 
     " Save the current window number
@@ -1748,6 +1846,13 @@ function! s:Tlist_Update_Tags()
         let fidx = s:Tlist_Get_File_Index(filename)
         if fidx != -1
             let s:tlist_{fidx}_valid = 0
+        else
+            " As the user requested to update the tags for the current
+            " file, remove it from the deleted list (if it was previously
+            " deleted on user request)
+            let esc_fname = escape(filename, '\') . "\n"
+            let s:tlist_deleted_flist = substitute(s:tlist_deleted_flist,
+                        \ esc_fname, '', '')
         endif
         call Tlist_Update_File_Tags(filename, &filetype)
     endif
@@ -2024,7 +2129,8 @@ function! s:Tlist_Find_Tag_text(fidx, linenum)
         " If the current line is the less than the first tag, then no need to
         " search
         let txt = s:tlist_{a:fidx}_tag_1
-        let start = strridx(txt, 'line:') + strlen('line:')
+	" 5 == length of 'line:'
+        let start = strridx(txt, 'line:') + 5
         let end = strridx(txt, "\t")
         if end < start
             let first_lnum = strpart(txt, start) + 0
@@ -2040,7 +2146,8 @@ function! s:Tlist_Find_Tag_text(fidx, linenum)
             let middle = (right + left + 1) / 2
             let txt = s:tlist_{a:fidx}_tag_{middle}
 
-            let start = strridx(txt, 'line:') + strlen('line:')
+	    " 5 == length of 'line:'
+            let start = strridx(txt, 'line:') + 5
             let end = strridx(txt, "\t")
             if end < start
                 let middle_lnum = strpart(txt, start) + 0
@@ -2066,7 +2173,8 @@ function! s:Tlist_Find_Tag_text(fidx, linenum)
         while left < right
             let txt = s:tlist_{a:fidx}_tag_{left}
 
-            let start = strridx(txt, 'line:') + strlen('line:')
+	    " 5 == length of 'line:'
+            let start = strridx(txt, 'line:') + 5
             let end = strridx(txt, "\t")
             if end < start
                 let lnum = strpart(txt, start) + 0
@@ -2375,7 +2483,9 @@ function! s:Tlist_Move_To_File(dir)
         endif
 
         " Otherwise, move to the beginning of the next file
-        exe s:tlist_{fidx}_start
+        if s:tlist_{fidx}_start != 0
+            exe s:tlist_{fidx}_start
+        endif
         return
     endif
 endfunction
@@ -2402,7 +2512,7 @@ function! s:Tlist_Session_Load(...)
         let w:tlist_file_window = "yes"
     endif
 
-    " Open to the taglist window
+    " Open the taglist window
     call s:Tlist_Open_Window()
 
     " Source the session file
@@ -2431,6 +2541,13 @@ function! s:Tlist_Session_Load(...)
             let s:tlist_{fidx}_visible = 0
             let i = i + 1
             continue
+        else
+            " As we are loading the tags from the session file, if this
+            " file was previously deleted by the user, now we need to
+            " add it back. So remove the file from the deleted list.
+            let esc_fname = escape(fname, '\') . "\n"
+            let s:tlist_deleted_flist = substitute(s:tlist_deleted_flist,
+                        \ esc_fname, '', '')
         endif
 
         let fidx = s:Tlist_Init_File(fname, ftype)
@@ -2491,13 +2608,15 @@ function! s:Tlist_Session_Load(...)
     endwhile
 
     " Initialize the taglist window
-    call s:Tlist_Init_Window()
     call s:Tlist_Refresh_Window()
 
-    if s:tlist_file_count > 0
-        " Jump to the beginning of the first file
-        call cursor(s:tlist_0_start, 1)
-    endif
+    " Go back to the original window
+    let prev_Tlist_Skip_Refresh = s:Tlist_Skip_Refresh
+    let s:Tlist_Skip_Refresh = 1
+    wincmd p
+    let s:Tlist_Skip_Refresh = prev_Tlist_Skip_Refresh
+
+    call s:Tlist_Refresh()
 endfunction
 
 " Tlist_Session_Save
@@ -2630,7 +2749,7 @@ function! s:Tlist_Update_File_Display(filename, action)
             endif
         elseif a:action == 2
             " Remove the file from the list
-            call s:Tlist_Remove_File(idx)
+            call s:Tlist_Remove_File(idx, 0)
         endif
 
         " Move the cursor to the original location
@@ -2709,9 +2828,11 @@ function! TagList_Start()
         let s:tlist_window_initialized = 1
     endif
 
-    " Open the taglist window
+    " Update the taglist window
     if bufnum != -1
-        call s:Tlist_Explore_File(filename, ftype)
+        if !s:Tlist_Skip_File(filename, ftype)
+            call s:Tlist_Explore_File(filename, ftype)
+        endif
     endif
 endfunction
 

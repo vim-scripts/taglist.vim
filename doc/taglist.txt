@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2004 June 1
+Last change: 2004 August 15
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -120,7 +120,7 @@ assumes that the system() Vim function is supported. Make sure that the
 2. Change to the $HOME/.vim/doc or $HOME/vimfiles/doc or
    $VIM/doc/vimfiles directory, start Vim and run the ":helptags ."
    command to process the taglist help file.
-3. Set the Tlist_Ctags_Cmd variable to point to the location of the
+3. Set the Tlist_Ctags_Cmd variable to point to the location (path) of the
    exuberant ctags utility (not to the directory) in the .vimrc file.
 4. If you are running a terminal/console version of Vim and the terminal
    doesn't support changing the window width then set the
@@ -222,7 +222,8 @@ order using the "s" key.
 Removing the tags listed for a file from the taglist window~
 You can remove the tags displayed for a file, by pressing the 'd' key
 when the cursor is on one of the tags listed for the file in the
-taglist window.
+taglist window. To again display the tags for the file in the taglist window,
+use the ':TlistUpdate' command.
 
 Zooming in and out of the taglist window~
 You can press the 'x' key in the taglist window to maximize the taglist
@@ -241,6 +242,10 @@ normal mode mapping for the <F7> key to update the taglist window. >
 
               nnoremap <silent> <F7> :TlistUpdate<CR>
 <
+If you have deleted the tags displayed for a file in the taglist window using
+the 'd' key, you can again display the tags for that file using the
+':TlistUpdate' command.
+
 Taglist Session~
 A taglist session refers to the group of files and their tags displayed in the
 taglist window in a Vim session.
@@ -343,16 +348,16 @@ need to use the |let| command in your .vimrc file to change the setting of any
 of these variables. 
 
 Tlist_Ctags_Cmd~
-The 'Tlist_Ctags_Cmd' variable specifies the location of the ctags utility.
-The exuberant ctags tool is installed under different names in different
-installations.  When the taglist plugin starts up, it checks for the names
-exuberant-ctags, ctags and tags in the PATH environment variable.  If any one
-of the named executable is found, then Tlist_Ctags_Cmd is set to that name.
-Set this variable to point to the location of the ctags utility in your
-system. Note that this variable should point to the fully qualified exuberant
-ctags location and NOT to the directory in which exuberant ctags is installed.
-If the exuberant ctags tool is not found in either PATH or in the specified
-location, then the taglist plugin will not be loaded.
+The 'Tlist_Ctags_Cmd' variable specifies the location (path) of the ctags
+utility.  The exuberant ctags tool is installed under different names in
+different installations.  When the taglist plugin starts up, it checks for the
+names exuberant-ctags, ctags, ctags.exe and tags in the PATH environment
+variable. If any one of the named executable is found, then Tlist_Ctags_Cmd is
+set to that name. Set this variable to point to the location of the ctags
+utility in your system. Note that this variable should point to the fully
+qualified exuberant ctags location and NOT to the directory in which exuberant
+ctags is installed.  If the exuberant ctags tool is not found in either PATH
+or in the specified location, then the taglist plugin will not be loaded.
 >
               let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe'
               let Tlist_Ctags_Cmd = '/usr/local/bin/ctags'
@@ -409,6 +414,16 @@ to be displayed, then set the 'Tlist_Display_Tag_Scope' to 0. By default,
 this variable is set to 1 and the tag scopes will be displayed. >
 
               let Tlist_Display_Tag_Scope = 0
+<
+Tlist_Show_One_File~
+By default, the taglist plugin will display tags for all the loaded buffers in
+the taglist window. If you prefer to display the tags only for the current
+buffer, then you can set the 'Tlist_Show_One_File' to 1. When this variable is
+set to 1, as you switch between buffers, the taglist window will be refreshed
+to display the tags for the current buffer and the tags for the previous
+buffer will be removed.
+>
+              let Tlist_Show_One_File = 1
 <
 Tlist_WinWidth~
 The default width of the vertically split taglist window is 30. This can be
@@ -748,8 +763,16 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
    variable.
 
    Is your filetype supported by the exuberant ctags utility? The file types
-   supported by the exuberant ctags utility is listed in the ctags help. If a
+   supported by the exuberant ctags utility are listed in the ctags help. If a
    file type is not supported, you have to extend exuberant ctags.
+
+   Run the following command from the shell and see whether you see
+   your tags in the output from exuberant ctags:
+
+      ctags  -f - --format=2 --excmd=pattern --fields=nks <filename>
+
+   If you see your tags in the output from the above command, then the
+   exuberant ctags utility is properly parsing your file.
 
    Do you have the .ctags or _ctags or the ctags.cnf file in your home
    directory for specifying default options or for extending exuberant ctags?
@@ -778,6 +801,18 @@ A. The taglist plugin doesn't use the tags file generated by exuberant ctags.
    For every opened file, the taglist plugin invokes the exuberant ctags
    utility to get the list of tags.
 
+Q. When I set the |updatetime| option to a low value (less than 1000) and if I
+   keep pressing a key with the taglist window open, the current buffer
+   contents are changed. Why is this?
+A. The taglist plugin uses the |CursorHold| autocmd to highlight the current
+   tag. The CursorHold autocmd triggers for every 'updatetime' milliseconds.
+   If the 'updatetime' option is set to a low value, then the CursorHold
+   autocmd will be triggered frequently. As the taglist plugin changes
+   the focus to the taglist window to highlight the current tag, this could
+   interfere with the key movement resulting in changing the contents of
+   the current buffer. The workaround for this problem is to not set the
+   'updatetime' option to a low value.
+
 ==============================================================================
 						*taglist-todo*
 11. Todo~
@@ -790,9 +825,11 @@ A. The taglist plugin doesn't use the tags file generated by exuberant ctags.
 4. Taglist plugin doesn't work properly with the Vim session support.
    When a session with taglist window is saved and restored, the plugin
    doesn't update the window. 
-5. In certain environments like cygwin or using Unix tools in Windows
-   environment, the taglist plugin doesn't work due to the difference in
-   the file path separators.
+5. When using the shell from the MKS toolkit, the taglist plugin 
+   doesn't work.
+6. The taglist plugin doesn't work with files edited remotely using the
+   netrw plugin. The exuberant ctags utility cannot process files over
+   scp/rcp/ftp, etc.
 
 ==============================================================================
 
