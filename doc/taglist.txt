@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2004 April 24
+Last change: 2004 June 1
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -11,9 +11,10 @@ Last change: 2004 April 24
 5. Usage 					|taglist-using|
 6. Configuration 				|taglist-configure|
 7. Commands 					|taglist-commands|
-8. Extending 					|taglist-extend|
-9. FAQ 						|taglist-faq|
-10. Todo					|taglist-todo|
+8. Global functions 				|taglist-functions|
+9. Extending 					|taglist-extend|
+10. FAQ 					|taglist-faq|
+11. Todo					|taglist-todo|
 
 ==============================================================================
 						*taglist-intro*
@@ -145,7 +146,11 @@ Add the above mapping to your ~/.vimrc file.  You can also open the taglist
 window on startup using the following command line: >
 
               $ vim +Tlist
+
 <
+When the taglist window is opened for the first time, all the files in the
+buffer list are processed and the tags for those files are displayed.
+
 Closing the taglist window~
 You can close the taglist window from the taglist window by pressing 'q' or
 using the Vim ":q" command. You can also use any of the Vim window commands
@@ -309,6 +314,8 @@ in the taglist window.
   -             Close a fold
   *             Open all folds
   =             Close all folds
+  [[		Jump to the beginning of the previous file
+  ]]		Jump to the beginning of the next file
   q             Close the taglist window
   ?             Display help
 
@@ -337,11 +344,16 @@ of these variables.
 
 Tlist_Ctags_Cmd~
 The 'Tlist_Ctags_Cmd' variable specifies the location of the ctags utility.
-By default, this variable is set to ctags. Set this variable to point to the
-location of the ctags utility in your system. Note that this variable should
-point to the fully qualified exuberant ctags location and NOT to the directory
-in which exuberant ctags is installed. >
-
+The exuberant ctags tool is installed under different names in different
+installations.  When the taglist plugin starts up, it checks for the names
+exuberant-ctags, ctags and tags in the PATH environment variable.  If any one
+of the named executable is found, then Tlist_Ctags_Cmd is set to that name.
+Set this variable to point to the location of the ctags utility in your
+system. Note that this variable should point to the fully qualified exuberant
+ctags location and NOT to the directory in which exuberant ctags is installed.
+If the exuberant ctags tool is not found in either PATH or in the specified
+location, then the taglist plugin will not be loaded.
+>
               let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe'
               let Tlist_Ctags_Cmd = '/usr/local/bin/ctags'
 <
@@ -399,8 +411,8 @@ this variable is set to 1 and the tag scopes will be displayed. >
               let Tlist_Display_Tag_Scope = 0
 <
 Tlist_WinWidth~
-The default width of the vertically split taglist window will be 30. This can
-be changed by modifying the 'Tlist_WinWidth' variable: >
+The default width of the vertically split taglist window is 30. This can be
+changed by modifying the 'Tlist_WinWidth' variable: >
 
               let Tlist_WinWidth = 20
 <
@@ -423,6 +435,12 @@ MS-DOS command window then you must set this variable to 0, otherwise the
 system may hang due to a Vim limitation (explained in :help win32-problems) >
 
               let Tlist_Inc_Winwidth = 0
+<
+Tlist_WinHeight~
+The default height of the horizontally split taglist window is 10. This can be
+changed by modifying the 'Tlist_WinHeight' variable: >
+
+              let Tlist_WinHeight = 20
 <
 Tlist_Use_SingleClick~
 By default, when you double click on the tag name using the left mouse 
@@ -467,6 +485,13 @@ in a Vim window, the corresponding tags tree will be opened.
 >
 	    let Tlist_File_Fold_Auto_Close = 1
 <
+Tlist_Enable_Fold_Column~
+By default, the tags tree includes a fold column. If you wish to disable this
+(for example, if you are working with a narrow Vim window or terminal), set
+the Tlist_Enable_Fold_Column variable to 0.
+>
+	    let Tlist_Enable_Fold_Column = 1
+<
 Tlist_Auto_Highlight_Tag~
 By default, the taglist plugin will highlight the current tag in the taglist
 window. If you want to disable the highlighting of the current tag, then you
@@ -496,10 +521,13 @@ The taglist plugin provides the following ex-mode commands:
 Tlist~
 Open or close (toggle) the taglist window. Opens the taglist window, if the
 window is not opened currently. Closes the taglist window, if the taglist
-window is already opened.
+window is already opened. When the taglist window is opened for the first
+time, all the files in the buffer list are processed and the tags are
+displayed in the taglist window.
 
 TlistClose~
-Close the taglist window. Can be used from any one of the Vim windows.
+Close the taglist window. This command can be used from any one of the Vim
+windows.
 
 TlistUpdate~
 Update the tags for the current buffer. When a file is changed and saved to
@@ -539,8 +567,70 @@ Load information about files and tags stored from the specified session file
 and update the taglist window with those files.
 
 ==============================================================================
+						*taglist-functions*
+8. Global functions~
+
+The taglist plugin function provides several global functions that can be
+invoked from other Vim plugins to interact with the taglist plugin. These
+functions are described below.
+
+Tlist_Update_File_Tags()~
+The Tlist_Update_File_Tags() function updates the tags for the specified file.
+The second argument specifies the Vim filetype for the specified file. If the
+taglist plugin has not processed the specified file previously, then the
+exuberant ctags tool is invoked to generate the tags for the file.
+
+The syntax for this function is
+>
+    Tlist_Update_File_Tags(filename, filetype)
+<
+Tlist_Get_Tag_Prototype_By_Line()~
+The Tlist_Get_Tag_Prototype_By_Line() function returns the prototype of the
+tag at or below the specified line number in the specified file. If the
+filename and line number are not specified, then the current buffer name and
+the current line number are used.
+
+The syntax for this function is
+>
+    Tlist_Get_Tag_Prototype_By_Line([filename, linenumber])
+<
+Tlist_Get_Tagname_By_Line()~
+The Tlist_Get_Tagname_By_Line() function returns the name of the tag at or
+below the specified line number in the specified file. If the filename and
+line number are not specified, then the current buffer name and the current
+line number are used.
+
+The syntax for this function is
+>
+    Tlist_Get_Tagname_By_Line([filename, linenumber])
+<
+This function can be used to display the current tag name in the status line
+or in the title bar. For example, the following 'statusline' setting will
+display the current tag name in the status line:
+>
+ set statusline=%<%f\ %h%m%r%{Tlist_Get_Tagname_By_Line()}%=%-14.(%l,%c%V%)\ %P
+<
+Note that the above 'statusline' setting will work only after the file is
+processed by the taglist plugin. For this, you have to either open the taglist
+window or you have to set the 'Tlist_Process_File_Always' option.
+
+Tlist_Set_App()~
+The Tlist_Set_App() function sets the name of the plugin that controls the
+taglist plugin window and buffer. For example, the winmanager plugin or the
+cream package use the taglist plugin and control the taglist window and
+buffer. These two plugins invoke this function and specify the name as
+"winmanager" or "cream" respectively. By default, the taglist plugin is a
+standalone plugin and controls the taglist window and buffer. If the taglist
+window is controlled by an external plugin, then the appname should be set
+appropriately.
+
+The syntax for this function is
+>
+    Tlist_Set_App(appname)
+<
+==============================================================================
 						*taglist-extend*
-8. Extending~
+9. Extending~
 
 The taglist plugin supports all the languages supported by the exuberant ctags
 tool, which includes the following languages: Assembly ASP, Awk, Beta, C, C++,
@@ -621,7 +711,7 @@ flags b, c and l respectively.
 
 ==============================================================================
 						*taglist-faq*
-9. Frequently Asked Questions~
+10. Frequently Asked Questions~
 
 Q. The taglist plugin doesn't work. The taglist window is empty and the tags
    defined in a file are not displayed. 
@@ -652,6 +742,11 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
    utility with the path to the file, if the incorrect slashes are used, then
    you will see errors. 
 
+   Are you using a Unix shell in a MS-Windows environment? For example,
+   the Unix shell from the MKS-toolkit. Do you have the SHELL environment
+   set to point to this shell? You can try resetting the SHELL environment
+   variable.
+
    Is your filetype supported by the exuberant ctags utility? The file types
    supported by the exuberant ctags utility is listed in the ctags help. If a
    file type is not supported, you have to extend exuberant ctags.
@@ -671,11 +766,11 @@ A. The taglist plugin uses the search pattern generated by the exuberant ctags
    pattern, the cursor may be positioned at the incorrect location. 
 
 Q. I have made some modifications to my file and introduced new
-   functions/classes/variables. I have not yet saved my file.
-A. The taglist plugin is not displaying the new tags when I update the taglist
-   window.  The exuberant ctags utility will process only files that are
-   present in the disk. To list the tags defined in a file, you have to save
-   the file and then update the taglist window. 
+   functions/classes/variables. I have not yet saved my file.  The taglist
+   plugin is not displaying the new tags when I update the taglist window.  
+A. The exuberant ctags utility will process only files that are present in the
+   disk. To list the tags defined in a file, you have to save the file and
+   then update the taglist window. 
 
 Q. I have created a ctags file using the exuberant ctags utility for my source
    tree. How do I configure the taglist plugin to use this tags file? 
@@ -685,7 +780,7 @@ A. The taglist plugin doesn't use the tags file generated by exuberant ctags.
 
 ==============================================================================
 						*taglist-todo*
-10. Todo~
+11. Todo~
 
 1. Support for displaying tags in a modified (not-yet-saved) file. 
 2. Group tags according to the scope and display them. For example,
