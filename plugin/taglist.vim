@@ -1,402 +1,50 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 3.0
-" Last Modified: Sep 24, 2003
+" Version: 3.1
+" Last Modified: Nov 1, 2003
 "
-" Overview
-" --------
-" The "Tag List" plugin provides an overview of the structure of source code
-" files and allows you to efficiently browse through source code files in
-" different programming languages. The "Tag List" plugin provides the
-" following features:
-"
-" 1. Opens a vertically/horizontally split Vim window with a list of tags
-"    (functions, classes, structures, variables, etc) defined in the current
-"    file.
-" 2. Groups the tags by their type and displays them in a foldable tree.
-" 3. Automatically updates the taglist window as you switch between
-"    files/buffers.
-" 4. As you open new files, the tags defined in new files are added to
-"    the existing file list and the tags defined in all the files are
-"    displayed grouped by the filename.
-" 5. When a tag name is selected from the taglist window, positions the cursor
-"    at the definition of the tag in the source file
-" 6. Automatically highlights the current tag name.
-" 7. Can display the prototype of a tag from the taglist window.
-" 8. Displays the scope of a tag.
-" 9. Can optionally use the tag prototype instead of the tag name.
-" 10. The tag list can be sorted either by name or by line number.
-" 11. Supports the following language files: Assembly, ASP, Awk, Beta, C, C++,
-"     C#, Cobol, Eiffel, Erlang, Fortran, HTML, Java, Javascript, Lisp, Lua,
-"     Make, Pascal, Perl, PHP, Python, Rexx, Ruby, Scheme, Shell, Slang, SML,
-"     Sql, TCL, Verilog, Vim and Yacc.
-" 12. Runs in all the platforms where the exuberant ctags utility and Vim are
-"     supported (this includes MS-Windows and Unix based systems).
-" 13. Runs in both console/terminal and GUI versions of Vim.
-" 14. The ctags output for a file is cached to speed up displaying the taglist
-"     window.
-" 15. Works with the winmanager plugin. Using the winmanager plugin, you can
-"     use Vim plugins like the file explorer, buffer explorer and the taglist
-"     plugin at the same time like an IDE.
-" 16. Can be easily extended to support new languages. Support for existing
-"     languages can be modified easily.
-"
-" You can visit the taglist plugin home page for more information:
+" The "Tag List" plugin is a source code browser plugin for Vim and
+" provides an overview of the structure of source code files and allows
+" you to efficiently browse through source code files for different
+" programming languages.  You can visit the taglist plugin home page for
+" more information:
 "
 "       http://www.geocities.com/yegappan/taglist
 "
 " You can subscribe to the taglist mailing list to post your questions
-" or suggestions for improvement or bug reports. Visit the following
+" or suggestions for improvement or to report bugs. Visit the following
 " page for subscribing to the mailing list:
 "
 "       http://groups.yahoo.com/group/taglist/
 "
-" This plugin relies on the exuberant ctags utility to dynamically generate
-" the tag listing. You can download the exuberant ctags utility from
-"
-"               http://ctags.sourceforge.net
-"
-" The exuberant ctags utility must be installed in your system to use this
-" plugin. You should use exuberant ctags version 5.0 and above.  This plugin
-" doesn't use or create a tags file and there is no need to create a tags file
-" to use this plugin.
-"
-" This plugin relies on the Vim "filetype" detection mechanism to determine
-" the type of the current file. You have to turn on the Vim filetype detection
-" by adding the following line to your .vimrc file:
-"
-"               filetype on
-"
-" This plugin will not work in 'compatible' mode.  Make sure the 'compatible'
-" option is not set. This plugin will not work if you run Vim in the
-" restricted mode (using the -Z command-line argument). This plugin also
-" assumes that the system() Vim function is supported.
+" For more information about using this plugin, after installing the
+" taglist plugin, use the ":help taglist" command.
 "
 " Installation
 " ------------
-" 1. Copy the taglist.vim plugin to the $HOME/.vim/plugin directory. Refer to
-"    ':help add-plugin', ':help add-global-plugin' and ':help runtimepath' for
-"    more details about Vim plugins.
-" 2. Set the Tlist_Ctags_Cmd variable to point to the location of the
-"    exuberant ctags utility (not to the directory).
-" 3. If you are running a terminal/console version of Vim and the terminal
-"    doesn't support changing the window width then set the Tlist_Inc_Winwidth
-"    variable to 0.
-" 4. Restart Vim.
-" 5. You can use the ":Tlist" command to open/close the taglist window. 
+" 1. Download the taglist.zip file and unzip the files to the $HOME/.vim
+"    or the $HOME/vimfiles or the $VIM/vimfiles directory. This should
+"    unzip the following two files (the directory structure should be
+"    preserved):
 "
-" Usage
-" -----
-" You can open the taglist window by using the ":Tlist" command. Invoking this
-" command will toggle (open or close) the taglist window. You can map a key to
-" invoke this command. For example, the following command creates a normal
-" mode mapping for the <F8> key to open or close the taglist window.
+"       plugin/taglist.vim - main taglist plugin file
+"       doc/taglist.txt    - documentation (help) file
 "
-"               nnoremap <silent> <F8> :Tlist<CR>
-"
-" Add the above mapping to your ~/.vimrc file.  You can also open the taglist
-" window on startup using the following command line:
-"
-"               $ vim +Tlist
-"
-" You can close the taglist window from the taglist window by pressing 'q' or
-" using the Vim ":q" command. You can also use any of the Vim window commands
-" to close the taglist window. Invoking the ":Tlist" command when the taglist
-" window is opened, will close the taglist window. You can also close the
-" taglist window by invoking the ":TlistClose" command.
-"
-" As you switch between source files, the taglist window will be automatically
-" updated with the tag listing for the current source file.  The tag names
-" will grouped by their type (variable, function, class, etc). For tags with
-" scope information (like class members, structures inside structures, etc),
-" the scope information will be displayed in square brackets "[]" after the
-" tagname.
+"    Refer to the 'add-plugin', 'add-global-plugin' and 'runtimepath'
+"    Vim help pages for more details about installing Vim plugins.
+" 2. Change to the $HOME/.vim/doc or $HOME/vimfiles/doc or
+"    $VIM/doc/vimfiles directory, start Vim and run the ":helptags ."
+"    command to process the taglist help file.
+" 3. Set the Tlist_Ctags_Cmd variable to point to the location of the
+"    exuberant ctags utility (not to the directory) in the .vimrc file.
+" 4. If you are running a terminal/console version of Vim and the
+"    terminal doesn't support changing the window width then set the
+"    'Tlist_Inc_Winwidth' variable to 0 in the .vimrc file.
+" 5. Restart Vim.
+" 6. You can now use the ":Tlist" command to open/close the taglist
+"    window. You can use the ":help taglist" command to get more
+"    information about using the taglist plugin.
 " 
-" The tag names will be  displayed as a foldable tree using the Vim folding
-" support. You can collapse the tree using the '-' key or using the Vim zc
-" fold command. You can open the tree using the '+' key or using the Vim zo
-" fold command. You can open all the fold using the '*' key or using the Vim
-" zR fold command You can also use the mouse to open/close the folds.
-"
-" You can select a tag either by pressing the <Enter> key or by double
-" clicking the tag name using the mouse. You can configure the taglist plugin
-" by setting the 'Tlist_Use_SingleClick' variable to jump to a tag on a single
-" mouse click. You can press the 'o' key to jump to the tag in a new window.
-" You can press the 'p' key to jump to the tag but still keep the cursor in
-" the taglist window itself.
-"
-" This plugin will automatically highlight the name of the current tag.  The
-" tag name will be highlighted after 'updatetime' milliseconds. The default
-" value for this Vim option is 4 seconds. You should not set the 'updatetime'
-" option to very low values to avoid unexpected problems. You can also use the
-" ":TlistSync" command to force the highlighting of the current tag. You can
-" map a key to invoke this command. For example, the following command creates
-" a normal mapping for the <F9> key to highlight the current tag name.
-"
-"               nnoremap <silent> <F9> :TlistSync<CR>
-"
-" Add the above mapping to your ~/.vimrc file.
-"
-" If you place the cursor on a tag name in the "Tag List" window, then the tag
-" prototype will be displayed at the Vim status line after 'updatetime'
-" milliseconds. The default value for the 'updatetime' Vim option is 4
-" seconds. You can also press the space bar to display the prototype of the
-" tag under the cursor.
-"
-" By default, the tag list will be sorted by the order in which the tags
-" appear in the file. You can sort the tags either by name or by order by
-" pressing the "s" key in the taglist window.
-"
-" You can press the 'x' key in the taglist window to maximize the taglist
-" window width/height. The window will be maximized to the maximum possible
-" width/height without closing the other existing windows. You can again press
-" 'x' to restore the taglist window to the default width/height.
-"
-" You can press the '?' key to display help information about using the
-" taglist window. If you again press the '?' key, the help information will be
-" removed.
-"
-" The following table lists the description of the keys that you can use
-" in the taglist window.
-"
-"       Key           Description
-"
-"       <CR>          Jump to the location where the tag under cursor is
-"                     defined.
-"       o             Jump to the location where the tag under cursor is
-"                     defined in a new window.
-"       p             Display the tag definition in the file window and
-"                     keep the cursor in the taglist window itself.
-"       <Space>       Display the prototype of the tag under the cursor.
-"       u             Update the tags listed in the taglist window
-"       s             Change the sort order of the tags (by name or by order)
-"       x             Zoom-in or Zoom-out the taglist window
-"       +             Open a fold
-"       -             Close a fold
-"       *             Open all folds
-"       =             Close all folds
-"       q             Close the taglist window
-"       ?             Display help
-"
-"
-" You can use the ":TlistUpdate" command to update the tags for the current
-" buffer after you made some changes to it. This is equivalent to pressing 'u'
-" in the taglist window. You should save the modified buffer before you update
-" the tag list for it. Otherwise the listed tags will not include the new tags
-" created in the buffer. You can map a key to invoke this command. For
-" example, the following command creates a normal mode mapping for the <F7>
-" key to update the taglist window.
-"
-"               nnoremap <silent> <F7> :TlistUpdate<CR>
-"
-" You can use the ":TlistShowPrototype" command to display the prototype of
-" a function in the specified line number. For example,
-"
-"               :TlistShowPrototype 50
-"
-" If the line number is not supplied, this command will display the prototype
-" of the current function.
-"
-" You can also use the taglist plugin with the winmanager plugin. This will
-" allow you to use the file explorer, buffer explorer and the taglist plugin
-" at the same time in different windows. To use the taglist plugin with the
-" winmanager plugin, set 'TagList' in the 'winManagerWindowLayout' variable.
-" For example, to use the file explorer plugin and the taglist plugin at the
-" same time, use the following setting:
-"
-"               let winManagerWindowLayout = 'FileExplorer|TagList'
-"
-" If you have more than one tag with the same name and prototype in a file,
-" then when you jump to one tag, the cursor may be positioned at the location
-" of the other tag. For example, in a C++ file if you have functions with the
-" same name and prototype in a file, then you will see this problem. This is
-" due to the fact that the taglist plugin uses the search pattern generated by
-" the exuberant ctags tool to position the cursor for a selected tag. The
-" exuberant ctags generates the same search pattern for tags with the same
-" prototype.
-"
-" The following highlight groups are defined and used to highlight the various
-" entities in the taglist window:
-"
-"     TagListTagName  - Used for tag names
-"     TagListTagScope - Used for tag scope
-"     TagListTitle    - Used for tag titles
-"     TagListComment  - Used for comments in the taglist window
-"     TagListSortBy   - Used for "sort by" text
-"     TagListCurDir   - Used for current directory name
-"
-" By default, these highlight groups are linked to the standard Vim highlight
-" groups. If you want to change these highlight groups, you can prepend 'My'
-" to the above highlight group names and define them in your .vimrc file. The
-" taglist plugin will use the defined highlight groups instead of the default
-" groups. For example, to change the highlighting used for tag names, you can
-" use:
-"
-"     highlight MyTagListTagName guifg=cyan
-"
-" Configuration
-" -------------
-" By changing the following variables you can configure the behavior of this
-" plugin. Set the following variables in your .vimrc file using the 'let'
-" command.
-"
-" This plugin uses the Tlist_Ctags_Cmd variable to locate the ctags utility.
-" By default, this is set to ctags. Set this variable to point to the location
-" of the ctags utility in your system. Note that this variable should point to
-" the fully qualified exuberant ctags location and NOT to the directory in
-" which exuberant ctags is installed.
-"
-"               let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe'
-"               let Tlist_Ctags_Cmd = '/usr/local/bin/ctags'
-"
-" By default, the tag names will be listed in the order in which they are
-" defined in the file. You can alphabetically sort the tag names by pressing
-" the "s" key in the taglist window. You can also change the default order by
-" setting the variable Tlist_Sort_Type to "name" or "order":
-"
-"               let Tlist_Sort_Type = "name"
-"
-" Be default, the tag names will be listed in a vertically split window.  If
-" you prefer a horizontally split window, then set the
-" 'Tlist_Use_Horiz_Window' variable to 1. If you are running MS-Windows
-" version of Vim in a MS-DOS command window, then you should use a
-" horizontally split window instead of a vertically split window.  Also, if
-" you are using an older version of xterm in a Unix system that doesn't
-" support changing the xterm window width, you should use a horizontally split
-" window.
-"
-"               let Tlist_Use_Horiz_Window = 1
-"
-" By default, the vertically split taglist window will appear on the left hand
-" side. If you prefer to open the window on the right hand side, you can set
-" the Tlist_Use_Right_Window variable to one:
-"
-"               let Tlist_Use_Right_Window = 1
-"
-" To automatically open the taglist window, when you start Vim, you can set
-" the Tlist_Auto_Open variable to 1. By default, this variable is set to 0 and
-" the taglist window will not be opened automatically on Vim startup.
-"
-"               let Tlist_Auto_Open = 1
-"
-" By default, only the tag name will be displayed in the taglist window. If
-" you like to see tag prototypes instead of names, set the
-" Tlist_Display_Prototype variable to 1. By default, this variable is set to 0
-" and only tag names will be displayed.
-"
-"               let Tlist_Display_Prototype = 1
-"
-" By default, the scope of a tag (like a C++ class) will be displayed in
-" square brackets next to the tag name. If you don't want the tag scopes
-" to be displayed, then set the Tlist_Display_Tag_Scope to 0. By default,
-" this variable is set to 1 and the tag scopes will be displayed.
-"
-"               let Tlist_Display_Tag_Scope = 0
-"
-" The default width of the vertically split taglist window will be 30.  This
-" can be changed by modifying the Tlist_WinWidth variable:
-"
-"               let Tlist_WinWidth = 20
-"
-" Note that the value of the 'winwidth' option setting determines the minimum
-" width of the current window. If you set the 'Tlist_WinWidth' variable to a
-" value less than that of the 'winwidth' option setting, then Vim will use the
-" value of the 'winwidth' option.
-"
-" By default, when the width of the window is less than 100 and a new taglist
-" window is opened vertically, then the window width will be increased by the
-" value set in the Tlist_WinWidth variable to accommodate the new window.  The
-" value of this variable is used only if you are using a vertically split
-" taglist window.  If your terminal doesn't support changing the window width
-" from Vim (older version of xterm running in a Unix system) or if you see any
-" weird problems in the screen due to the change in the window width or if you
-" prefer not to adjust the window width then set the 'Tlist_Inc_Winwidth'
-" variable to 0.  CAUTION: If you are using the MS-Windows version of Vim in a
-" MS-DOS command window then you must set this variable to 0, otherwise the
-" system may hang due to a Vim limitation (explained in :help win32-problems)
-"
-"               let Tlist_Inc_Winwidth = 0
-"
-" By default, when you double click on the tag name using the left mouse 
-" button, the cursor will be positioned at the definition of the tag. You 
-" can set the Tlist_Use_SingleClick variable to one to jump to a tag when
-" you single click on the tag name using the mouse. By default this variable
-" is set to zero.
-"
-"               let Tlist_Use_SingleClick = 1
-"
-" Due to a bug in Vim, if you set Tlist_Use_SingleClick to one and try to
-" resize the taglist window using the mouse, then Vim will crash. The fix for
-" this bug will be available in the next version of Vim. In the meantime,
-" instead of resizing the taglist window using the mouse, you can use normal
-" Vim window resizing commands to resize the taglist window.
-"
-" By default, the taglist window will contain text that display the name of
-" the file, sort order information and the key to press to get help. Also,
-" empty lines will be used to separate different groups of tags. If you
-" don't need these information, you can set the Tlist_Compact_Format variable
-" to one to get a compact display.
-"
-"               let Tlist_Compact_Format = 1
-"
-" If you want to exit Vim if only the taglist window is currently open, then
-" set the Tlist_Exit_OnlyWindow variable to one. By default, this variable is
-" set to zero and the Vim instance will not be closed if only the taglist
-" window is open.
-"
-"               let Tlist_Exit_OnlyWindow = 1
-"
-" Extending
-" ---------
-" You can extend exuberant ctags to add support for new languages. For more
-" information, visit the following page
-"
-"               http://ctags.sourceforge.net/EXTENDING.html
-"
-" You can extend the taglist plugin to add support for new languages or modify
-" the support for an already supported language by setting the following
-" variables in the .vimrc file.
-"
-" To modify the support for an already supported language, you have to set the
-" tlist_xxx_settings variable. Replace xxx with the Vim filetype name.  To
-" determine the filetype name used by Vim for a file, use the command
-"
-"               :set filetype
-"
-" The format of the value set in the tlist_xxx_settings variable is
-"
-"          <language_name>;flag1:name1;flag2:name2;flag3:name3
-"
-" The different fields are separated by the ';' character.  The first field
-" 'language_name' is the name used by exuberant ctags. This name can be
-" different from the file type name used by Vim. For example, for C++, the
-" language name used by ctags is 'c++' but the filetype name used by Vim is
-" 'cpp'. The remaining fields follow the format "flag:name". The sub-field
-" 'flag' is the language specific flag used by exuberant ctags to generate the
-" corresponding tags.  For example, for the C language, to list only the
-" functions, the 'f' flag should be used. For more information about the flags
-" supported by exuberant ctags for a particular language, read the help text
-" from the 'ctags --help' comand. The sub-field 'name' specifies the title
-" text to use for displaying the tags of a particular type. For example,
-" 'name' can be set to 'functions'.
-"
-" For example, to list only the classes and functions defined in a C++
-" language file, add the following lines to your .vimrc file
-"
-"       let tlist_cpp_settings = 'c++;c:class;f:function'
-"
-" In the above setting, 'cpp' is the Vim filetype name and 'c++' is the name
-" used by the exuberant ctags tool. 'c' and 'f' are the flags passed to
-" exuberant ctags to list classes and functions.
-"
-" For example, to display only functions defined in a C file and to use "My
-" Functions" as the title for the function group, use 
-"
-"       let tlist_c_settings = 'c;f:My Functions'
-"
-" To add support for a new language, set the tlist_xxx_settings variable
-" appropriately as described above.
-"
 " ****************** Do not modify after this line ************************
 if exists('loaded_taglist') || &cp
     finish
@@ -522,6 +170,9 @@ let s:tlist_def_eiffel_settings = 'eiffel;c:class;f:feature'
 " erlang language
 let s:tlist_def_erlang_settings = 'erlang;d:macro;r:record;m:module;f:function'
 
+" expect (same as tcl) language
+let s:tlist_def_expect_settings = 'expect;c:class;f:method;p:procedure'
+
 " fortran language
 let s:tlist_def_fortran_settings = 'fortran;p:program;b:block data;' .
                     \ 'c:common;e:entry;i:interface;k:type;l:label;m:module;' .
@@ -590,6 +241,12 @@ let s:tlist_def_sql_settings = 'sql;c:cursor;F:field;P:package;r:record;' .
 
 " tcl language
 let s:tlist_def_tcl_settings = 'tcl;c:class;f:method;p:procedure'
+
+" vera language
+let s:tlist_def_vera_settings = 'vera;c:class;d:macro;e:enumerator;' .
+                                \ 'f:function;g:enum;m:member;p:program;' .
+                                \ 'P:prototype;t:task;T:typedef;v:variable;' .
+                                \ 'x:externvar'
 
 "verilog language
 let s:tlist_def_verilog_settings = 'verilog;m:module;P:parameter;r:register;' .
@@ -1323,6 +980,9 @@ function! s:Tlist_Init_Window()
     " List all the tags for the previously processed files
     let i = 0
     while i < s:tlist_file_count
+        " Mark the file as not visible, so that Tlist_Explore_File() will
+        " display the tags for this file and mark the file as visible
+        let s:tlist_{i}_visible = 0
         call s:Tlist_Explore_File(s:tlist_{i}_filename, s:tlist_{i}_filetype)
         let i = i + 1
     endwhile
@@ -1347,8 +1007,6 @@ function! s:Tlist_Post_Close_Cleanup()
     if has('syntax')
         silent! syntax clear TagListTitle
         silent! syntax clear TagListComment
-        silent! syntax clear TagListSortBy
-        silent! syntax clear TagListCurDir
         silent! syntax clear TagListTagScope
     endif
 
@@ -1648,13 +1306,13 @@ function! s:Tlist_Process_File(filename, ftype)
     " Handle errors
     if v:shell_error && cmd_output != ''
         call s:Tlist_Warning_Msg(cmd_output)
-        return
+        return -1
     endif
 
     " No tags for current file
     if cmd_output == ''
         call s:Tlist_Warning_Msg('No tags found for ' . a:filename)
-        return
+        return -1
     endif
 
     " Process the ctags output one line at a time. Separate the tag output
@@ -2459,6 +2117,205 @@ function! s:Tlist_Get_Tag_Prototype_By_Line(linenum)
     return s:Tlist_Extract_Tag_Prototype(tag_txt)
 endfunction
 
+" Tlist_Session_Load
+" Load a taglist session (information about all the displayed files
+" and the tags) from the specified file
+function! s:Tlist_Session_Load(...)
+    if a:0 == 0 || a:1 == ''
+        call s:Tlist_Warning_Msg('Usage: TlistSessionLoad <filename>')
+        return
+    endif
+
+    let sessionfile = a:1
+
+    if !filereadable(sessionfile)
+        call s:Tlist_Warning_Msg('Error: Unable to open file ' . sessionfile)
+        return
+    endif
+
+    " Mark the current window as the file window
+    if bufname('%') !~ g:TagList_title
+        let w:tlist_file_window = "yes"
+    endif
+
+    " Open to the taglist window
+    call s:Tlist_Open_Window()
+
+    " Source the session file
+    exe 'source ' . sessionfile
+
+    let new_file_count = g:tlist_file_count
+    unlet g:tlist_file_count
+
+    let i = 0
+    while i < new_file_count
+        let ftype = g:tlist_{i}_filetype
+        unlet g:tlist_{i}_filetype
+
+        if !exists("s:tlist_" . ftype . "_count")
+            if s:Tlist_FileType_Init(ftype) == 0
+                let i = i + 1
+                continue
+            endif
+        endif
+
+        let fname = g:tlist_{i}_filename
+        unlet g:tlist_{i}_filename
+
+        let fidx = s:Tlist_Get_File_Index(fname)
+        if fidx != -1
+            let s:tlist_{fidx}_visible = 0
+            let i = i + 1
+            continue
+        endif
+
+        let fidx = s:Tlist_Init_File(fname, ftype)
+
+        let s:tlist_{fidx}_filename = fname
+
+        let s:tlist_{fidx}_sort_type = g:tlist_{i}_sort_type
+        unlet g:tlist_{i}_sort_type
+
+        let s:tlist_{fidx}_filetype = ftype
+
+        let s:tlist_{fidx}_start = 0
+        let s:tlist_{fidx}_end = 0
+
+        let s:tlist_{fidx}_valid = 1
+        " Mark the file as not visible, so that Tlist_Init_Window() function
+        " will display the tags for this file
+        let s:tlist_{fidx}_visible = 0
+
+        let s:tlist_{fidx}_tag_count = g:tlist_{i}_tag_count
+        unlet g:tlist_{i}_tag_count
+
+        let j = 1
+        while j <= s:tlist_{fidx}_tag_count
+            let s:tlist_{fidx}_tag_{j} = g:tlist_{i}_tag_{j}
+            unlet g:tlist_{i}_tag_{j}
+            let j = j + 1
+        endwhile
+
+        let j = 1
+        while j <= s:tlist_{ftype}_count
+            let ttype = s:tlist_{ftype}_{j}_name
+
+            if exists('g:tlist_' . i . '_' . ttype)
+                let s:tlist_{fidx}_{ttype} = g:tlist_{i}_{ttype}
+                unlet g:tlist_{i}_{ttype}
+                let s:tlist_{fidx}_{ttype}_start = 0
+                let s:tlist_{fidx}_{ttype}_count = g:tlist_{i}_{ttype}_count
+                unlet g:tlist_{i}_{ttype}_count
+
+                let k = 1
+                while k <= s:tlist_{fidx}_{ttype}_count
+                    let s:tlist_{fidx}_{ttype}_{k} = g:tlist_{i}_{ttype}_{k}
+                    unlet g:tlist_{i}_{ttype}_{k}
+                    let k = k + 1
+                endwhile
+            else
+                let s:tlist_{fidx}_{ttype} = ''
+                let s:tlist_{fidx}_{ttype}_start = 0
+                let s:tlist_{fidx}_{ttype}_count = 0
+            endif
+
+            let j = j + 1
+        endwhile
+
+        let i = i + 1
+    endwhile
+
+    " Initialize the taglist window
+    call s:Tlist_Init_Window()
+
+    if s:tlist_file_count > 0
+        " Jump to the beginning of the first file
+        call cursor(s:tlist_0_start, 1)
+    endif
+endfunction
+
+" Tlist_Session_Save
+" Save a taglist session (information about all the displayed files
+" and the tags) into the specified file
+function! s:Tlist_Session_Save(...)
+    if a:0 == 0 || a:1 == ''
+        call s:Tlist_Warning_Msg('Usage: TlistSessionSave <filename>')
+        return
+    endif
+
+    let sessionfile = a:1
+
+    if s:tlist_file_count == 0
+        " There is nothing to save
+        call s:Tlist_Warning_Msg('Warning: Taglist is empty. Nothing to save.')
+        return
+    endif
+
+    if filereadable(sessionfile)
+        let ans = input("Do you want to overwrite " . sessionfile . " (Y/N)?")
+        if ans !=? 'y'
+            return
+        endif
+
+        echo "\n"
+    endif
+
+    exe 'redir! > ' . sessionfile
+
+    silent! echo '" Taglist session file. This file is auto-generated.'
+    silent! echo '" File information'
+    silent! echo 'let g:tlist_file_count = ' . s:tlist_file_count
+
+    let i = 0
+
+    while i < s:tlist_file_count
+        " Store information about the file
+        silent! echo 'let g:tlist_' . i . "_filename = '" . 
+                                            \ s:tlist_{i}_filename . "'"
+        silent! echo 'let g:tlist_' . i . '_sort_type = "' . 
+                                                \ s:tlist_{i}_sort_type . '"'
+        silent! echo 'let g:tlist_' . i . '_filetype = "' . 
+                                            \ s:tlist_{i}_filetype . '"'
+        silent! echo 'let g:tlist_' . i . '_tag_count = ' . 
+                                                        \ s:tlist_{i}_tag_count
+        " Store information about all the tags
+        let j = 1
+        while j <= s:tlist_{i}_tag_count
+            let txt = escape(s:tlist_{i}_tag_{j}, '"\\')
+            silent! echo 'let g:tlist_' . i . '_tag_' . j . ' = "' . txt . '"'
+            let j = j + 1
+        endwhile
+
+        " Store information about all the tags grouped by their type
+        let ftype = s:tlist_{i}_filetype
+        let j = 1
+        while j <= s:tlist_{ftype}_count
+            let ttype = s:tlist_{ftype}_{j}_name
+            if s:tlist_{i}_{ttype}_count != 0
+                let txt = substitute(s:tlist_{i}_{ttype}, "\n", "\\\\n", "g")
+                silent! echo 'let g:tlist_' . i . '_' . ttype . ' = "' . 
+                                                \ txt . '"'
+                silent! echo 'let g:tlist_' . i . '_' . ttype . '_count = ' . 
+                                                     \ s:tlist_{i}_{ttype}_count
+                let k = 1
+                while k <= s:tlist_{i}_{ttype}_count
+                    silent! echo 'let g:tlist_' . i . '_' . ttype . '_' . k . 
+                                \ ' = ' . s:tlist_{i}_{ttype}_{k}
+                    let k = k + 1
+                endwhile
+            endif
+            let j = j + 1
+        endwhile
+
+        silent! echo
+
+        let i = i + 1
+    endwhile
+
+    redir END
+endfunction
+
+
 " Define the taglist autocommand to automatically open the taglist window on
 " Vim startup
 if g:Tlist_Auto_Open
@@ -2472,6 +2329,8 @@ command! -nargs=0 TlistUpdate call s:Tlist_Update_Tags()
 command! -nargs=0 TlistSync call s:Tlist_Highlight_Tag(
                             \ fnamemodify(bufname('%'), ':p'), line('.'))
 command! -nargs=? TlistShowPrototype echo s:Tlist_Get_Tag_Prototype_By_Line(<q-args>)
+command! -nargs=* -complete=file TlistSessionLoad call s:Tlist_Session_Load(<q-args>)
+command! -nargs=* -complete=file TlistSessionSave call s:Tlist_Session_Save(<q-args>)
 
 " Winmanager integration
 
