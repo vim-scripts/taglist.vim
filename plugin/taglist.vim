@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 2.5
-" Last Modified: April 26, 2003
+" Version: 2.6
+" Last Modified: June 9, 2003
 "
 " Overview
 " --------
@@ -94,7 +94,8 @@
 " You can close the taglist window from the taglist window by pressing 'q' or
 " using the Vim ":q" command. You can also use any of the Vim window commands
 " to close the taglist window. Invoking the ":Tlist" command when the taglist
-" window is opened, will close the taglist window.
+" window is opened, will close the taglist window. You can also close the
+" taglist window by invoking the ":TlistClose" command.
 "
 " As you switch between source files, the taglist window will be automatically
 " updated with the tag listing for the current source file.  The tag names
@@ -112,7 +113,9 @@
 " You can select a tag either by pressing the <Enter> key or by double
 " clicking the tag name using the mouse. You can configure the taglist plugin
 " by setting the 'Tlist_Use_SingleClick' variable to jump to a tag on a single
-" mouse click.
+" mouse click. You can press the 'o' key to jump to the tag in a new window.
+" You can press the 'p' key to jump to the tag but still keep the cursor in
+" the taglist window itself.
 "
 " This plugin will automatically highlight the name of the current tag.  The
 " tag name will be highlighted after 'updatetime' milliseconds. The default
@@ -153,6 +156,8 @@
 "                     defined.
 "       o             Jump to the location where the tag under cursor is
 "                     defined in a new window.
+"       p             Display the tag definition in the file window and
+"                     keep the cursor in the taglist window itself.
 "       <Space>       Display the prototype of the tag under the cursor.
 "       u             Update the tags listed in the taglist window
 "       s             Change the sort order of the tags (by name or by order)
@@ -279,6 +284,13 @@
 "
 "               let Tlist_Compact_Format = 1
 "
+" If you want to exit Vim if only the taglist window is currently open, then
+" set the Tlist_Exit_OnlyWindow variable to one. By default, this variable is
+" set to zero and the Vim instance will not be closed if only the taglist
+" window is open.
+"
+"               let Tlist_Exit_OnlyWindow = 1
+"
 " Extending
 " ---------
 " You can extend exuberant ctags to add support for new languages. For more
@@ -399,6 +411,12 @@ endif
 " Also, controls whether empty lines are used to separate the tag tree.
 if !exists('Tlist_Compact_Format')
     let Tlist_Compact_Format = 0
+endif
+
+" Exit Vim if only the taglist window is currently open. By default, this is
+" set to zero.
+if !exists('Tlist_Exit_OnlyWindow')
+    let Tlist_Exit_OnlyWindow = 0
 endif
 
 " assembly language
@@ -880,17 +898,18 @@ function! s:Tlist_Init_Window(bufnum)
         if exists("s:tlist_show_help") && s:tlist_show_help == 1
             call append(0, '" <enter> : Jump to tag definition')
             call append(1, '" o : Jump to tag definition in new window')
-            call append(2, '" <space> : Display tag prototype')
-            call append(3, '" u : Update tag list')
-            call append(4, '" s : Select sort field')
-            call append(5, '" x : Zoom-out/Zoom-in taglist window')
-            call append(6, '" + : Open a fold')
-            call append(7, '" - : Close a fold')
-            call append(8, '" * : Open all folds')
-            call append(9, '" q : Close the taglist window')
-            call append(10, '" ? : Remove help text')
-            call append(11, '" Sorted by ' . b:tlist_sort_type)
-            call append(12, '"= ' . fnamemodify(filename, ':t') . ' (' . 
+            call append(2, '" p : Preview the tag definition')
+            call append(3, '" <space> : Display tag prototype')
+            call append(4, '" u : Update tag list')
+            call append(5, '" s : Select sort field')
+            call append(6, '" x : Zoom-out/Zoom-in taglist window')
+            call append(7, '" + : Open a fold')
+            call append(8, '" - : Close a fold')
+            call append(9, '" * : Open all folds')
+            call append(10, '" q : Close the taglist window')
+            call append(11, '" ? : Remove help text')
+            call append(12, '" Sorted by ' . b:tlist_sort_type)
+            call append(13, '"= ' . fnamemodify(filename, ':t') . ' (' . 
                                    \ fnamemodify(filename, ':p:h') . ')')
         else
             call append(0, '" Press ? to display help text')
@@ -962,6 +981,7 @@ function! s:Tlist_Init_Window(bufnum)
     " Create buffer local mappings for jumping to the tags and sorting the list
     nnoremap <buffer> <silent> <CR> :call <SID>Tlist_Jump_To_Tag(0)<CR>
     nnoremap <buffer> <silent> o :call <SID>Tlist_Jump_To_Tag(1)<CR>
+    nnoremap <buffer> <silent> p :call <SID>Tlist_Jump_To_Tag(2)<CR>
     nnoremap <buffer> <silent> <2-LeftMouse> :call <SID>Tlist_Jump_To_Tag(0)<CR>
     nnoremap <buffer> <silent> s :call <SID>Tlist_Change_Sort()<CR>
     nnoremap <buffer> <silent> + :silent! foldopen<CR>
@@ -981,6 +1001,7 @@ function! s:Tlist_Init_Window(bufnum)
     " Windows needs return
     inoremap <buffer> <silent> <Return> <C-o>:call <SID>Tlist_Jump_To_Tag(0)<CR>
     inoremap <buffer> <silent> o        <C-o>:call <SID>Tlist_Jump_To_Tag(1)<CR>
+    inoremap <buffer> <silent> p        <C-o>:call <SID>Tlist_Jump_To_Tag(2)<CR>
     inoremap <buffer> <silent> <2-LeftMouse> <C-o>:call 
                                             \ <SID>Tlist_Jump_To_Tag(0)<CR>
     inoremap <buffer> <silent> s        <C-o>:call <SID>Tlist_Change_Sort()<CR>
@@ -1011,7 +1032,8 @@ function! s:Tlist_Init_Window(bufnum)
         " Highlight the current tag 
         autocmd CursorHold * silent call <SID>Tlist_Highlight_Tag(bufnr('%'), 
                                         \ line('.'))
-        autocmd BufUnload __Tag_List__ call <SID>Tlist_Close_Window()
+        autocmd BufUnload __Tag_List__ call <SID>Tlist_Post_Close_Cleanup()
+        autocmd BufEnter __Tag_List__ call <SID>Tlist_Check_Only_Window()
         if !s:tlist_part_of_winmanager
         " Adjust the Vim window width when taglist window is closed
         " Auto refresh the taglisting window
@@ -1020,9 +1042,9 @@ function! s:Tlist_Init_Window(bufnum)
     augroup end
 endfunction
 
-" Tlist_Close_Window()
+" Tlist_Post_Close_Cleanup()
 " Close the taglist window and adjust the Vim window width
-function! s:Tlist_Close_Window()
+function! s:Tlist_Post_Close_Cleanup()
     " Remove the autocommands for the taglist window
     silent! autocmd! TagListAutoCmds
 
@@ -1051,6 +1073,19 @@ function! s:Tlist_Close_Window()
         " Adjust the Vim window width
         let &columns= &columns - (g:Tlist_WinWidth + 1)
     endif
+    endif
+endfunction
+
+" Tlist_Check_Only_Window
+" Check if only the taglist window is opened currently. If the
+" Tlist_Exit_OnlyWindow variable is set, then close the taglist window
+function! s:Tlist_Check_Only_Window()
+    if g:Tlist_Exit_OnlyWindow
+        if winbufnr(2) == -1
+            " If only the taglist window is currently open, then the buffer
+            " number associated with window 2 will be -1.
+            quit
+        endif
     endif
 endfunction
 
@@ -1334,6 +1369,20 @@ function! s:Tlist_Explore_File(bufnum)
     return
 endfunction
 
+" Tlist_Close_Window
+" Close the taglist window
+function! s:Tlist_Close_Window()
+    " Make sure the taglist window exists
+    let winnum = bufwinnr(g:TagList_title)
+    if winnum != -1
+        " Jump to the window if not already there
+        if winnr() != winnum
+            exe winnum . 'wincmd w'
+        endif
+        close
+    endif
+endfunction
+
 " Tlist_Toggle_Window()
 " Open or close a taglist window
 function! s:Tlist_Toggle_Window(bufnum)
@@ -1574,7 +1623,10 @@ endfunction
 
 " Tlist_Jump_To_Tag()
 " Jump to the location of the current tag
-function! s:Tlist_Jump_To_Tag(new_window)
+" win_ctrl == 0 - Reuse the existing file window
+" win_ctrl == 1 - Open a new window
+" win_ctrl == 2 - Preview the tag
+function! s:Tlist_Jump_To_Tag(win_ctrl)
     " Do not process comment lines and empty lines
     let curline = getline('.')
     if curline == '' || curline[0] == '"'
@@ -1607,7 +1659,7 @@ function! s:Tlist_Jump_To_Tag(new_window)
     let s:Tlist_Skip_Refresh = 1
 
     if s:tlist_part_of_winmanager
-        call WinManagerFileEdit(bufname(b:tlist_bufnum), a:new_window)
+        call WinManagerFileEdit(bufname(b:tlist_bufnum), a:win_ctrl)
     else
     " Goto the window containing the file.  If the window is not there, open a
     " new window
@@ -1636,7 +1688,7 @@ function! s:Tlist_Jump_To_Tag(new_window)
 
         " If the user asked to jump to the tag in a new window, then split the
         " existing window into two.
-        if a:new_window
+        if a:win_ctrl == 1
             split
         endif
     endif
@@ -1653,6 +1705,14 @@ function! s:Tlist_Jump_To_Tag(new_window)
         if foldlevel('.') != 0
             normal zo
         endif
+    endif
+
+    " If the user selects to preview the tag then jump back to the
+    " taglist window
+    if a:win_ctrl == 2
+        " Go back to the taglist window
+        let winnum = bufwinnr(g:TagList_title)
+        exe winnum . 'wincmd w'
     endif
 
     let s:Tlist_Skip_Refresh = 0
@@ -1780,7 +1840,8 @@ endfunction
 " Tlist_Highlight_Tag()
 " Do a binary search in the array of tag names and pick a tag entry that
 " contains the current line and highlight it.  The idea behind this function
-" is taken from the ctags.vim script available at the Vim online website.
+" is taken from the ctags.vim script (by Alexey Marinichev) available at the
+" Vim online website.
 function! s:Tlist_Highlight_Tag(bufnum, curline)
     let filename = fnamemodify(bufname(a:bufnum), ':p')
     if filename == ''
@@ -1915,9 +1976,9 @@ if g:Tlist_Auto_Open
     autocmd VimEnter * nested Tlist
 endif
 
-" Define the 'Tlist' and 'TlistSync' user commands to open/close taglist
-" window
+" Define the user commands to manage the taglist window
 command! -nargs=0 Tlist call s:Tlist_Toggle_Window(bufnr('%'))
+command! -nargs=0 TlistClose call s:Tlist_Close_Window()
 command! -nargs=0 TlistSync call s:Tlist_Highlight_Tag(bufnr('%'), line('.'))
 command! -nargs=? TlistShowPrototype echo s:Tlist_Get_Tag_Prototype_By_Line(<q-args>)
 
