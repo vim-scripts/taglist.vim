@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2003 Oct 29
+Last change: 2004 April 24
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -10,7 +10,7 @@ Last change: 2003 Oct 29
 4. Installation 				|taglist-install|
 5. Usage 					|taglist-using|
 6. Configuration 				|taglist-configure|
-6. Commands 					|taglist-commands|
+7. Commands 					|taglist-commands|
 8. Extending 					|taglist-extend|
 9. FAQ 						|taglist-faq|
 10. Todo					|taglist-todo|
@@ -99,7 +99,8 @@ by adding the following line to your .vimrc file: >
 This plugin will not work in |compatible| mode.  Make sure the |compatible|
 option is not set. This plugin will not work if you run Vim in the
 restricted mode (using the -Z command-line argument). This plugin also
-assumes that the system() Vim function is supported.
+assumes that the system() Vim function is supported. Make sure that the
+'C' flag is not set in the 'cpoptions' Vim option.
 
 ==============================================================================
 						*taglist-install*
@@ -236,10 +237,14 @@ normal mode mapping for the <F7> key to update the taglist window. >
               nnoremap <silent> <F7> :TlistUpdate<CR>
 <
 Taglist Session~
+A taglist session refers to the group of files and their tags displayed in the
+taglist window in a Vim session.
+
 You can save and restore taglist sessions (and all the displayed tags)
-using the TlistSessionSave and TlistSessionLoad commands. To save all
-the tags displayed in the taglist window in a file, use the TlistSessionSave
-command and specify the filename: >
+using the TlistSessionSave and TlistSessionLoad commands.
+
+To save all the tags displayed in the taglist window in a file, use the
+TlistSessionSave command and specify the filename: >
 
       :TlistSessionSave <file name>
 <
@@ -249,7 +254,14 @@ To load the saved taglist session, use the TlistSessionLoad command: >
 <
 Information about the tags displayed for the files in the taglist window will
 be stored in the taglist session file. This will be used to restore the
-taglist window state later.
+taglist window state later. When you load a taglist session file, the tags
+stored in the file will be added to the tags already displayed in the taglist
+window.
+
+The taglist session feature can be used to save the tags for large files or a
+group of frequently used files (like a project). By using the taglist session
+file, you can minimize the amount to time it takes to load/refresh the taglist
+window for those files.
 
 Changing the taglist window highlighting~
 The following highlight groups are defined and used to highlight the various
@@ -299,6 +311,8 @@ in the taglist window.
   =             Close all folds
   q             Close the taglist window
   ?             Display help
+
+The above keys will work in both the normal mode and the insert mode.
 
 Using the taglist plugin with the winmanager plugin~
 You can use the taglist plugin with the winmanager plugin. This will allow you
@@ -442,6 +456,37 @@ window is open. >
 
               let Tlist_Exit_OnlyWindow = 1
 <
+Tlist_File_Fold_Auto_Close~
+By default, the tags tree displayed in the taglist window for all the buffers
+will be opened. You can close/fold the tags tree for the files manually.  To
+automatically close the tags tree for inactive files, you can set the
+Tlist_File_Fold_Auto_Close variable to 1.  When this variable is set to 1, if
+a Vim buffer is no longer displayed in a Vim window, the corresponding tags
+tree in the taglist window will be collapsed/folded. When a buffer is loaded
+in a Vim window, the corresponding tags tree will be opened.
+>
+	    let Tlist_File_Fold_Auto_Close = 1
+<
+Tlist_Auto_Highlight_Tag~
+By default, the taglist plugin will highlight the current tag in the taglist
+window. If you want to disable the highlighting of the current tag, then you
+can set the Tlist_Auto_Highlight_Tag variable to zero. Note that even though
+the current tag highlighting is disabled, the tags for a new file will still
+be added to the taglist window.
+>
+	    let Tlist_Auto_Highlight_Tag = 0
+<
+Tlist_Process_File_Always~
+By default, the taglist plugin will generate and process tags for new files
+only when the taglist window is opened. When the taglist window is closed, the
+taglist plugin will stop processing the tags for new files. You can set the
+Tlist_Process_File_Always variable to 1 to generate the list of tags for new
+files even when the taglist window is closed. When you open the taglist
+window, the tags for all the files opened so far will be displayed.
+>
+	    let Tlist_Process_File_Always = 1
+<
+
 ==============================================================================
 						*taglist-commands*
 7. Commands~
@@ -449,33 +494,49 @@ window is open. >
 The taglist plugin provides the following ex-mode commands:
 
 Tlist~
-You can use the ":Tlist" command to open or close (toggle) the taglist window.
-Invoking the ":Tlist" command when the taglist window is opened, will close
-the taglist window. 
+Open or close (toggle) the taglist window. Opens the taglist window, if the
+window is not opened currently. Closes the taglist window, if the taglist
+window is already opened.
 
 TlistClose~
-You can use the ":TlistClose" command to close the taglist window.
+Close the taglist window. Can be used from any one of the Vim windows.
 
 TlistUpdate~
-You can use the ":TlistUpdate" command to update the tags for the current
-buffer after you made some changes to the buffer.  You should save the
-modified buffer before you update the taglist window. Otherwise the listed
-tags will not include the new tags created in the buffer.
+Update the tags for the current buffer. When a file is changed and saved to
+disk, the taglist window will not be automatically updated to display the new
+tags in the file. The ":TlistUpdate" command can be used to force an update of
+the tags for the current file/buffer. As the taglist plugin uses the file
+saved in the disk (instead of the file displayed in a Vim buffer), you should
+save the modified buffer before you update the taglist window. Otherwise the
+listed tags will not include the new tags created in the buffer.
 
 TlistSync~
-You can use the ":TlistSync" command to highlight the current tag.
+Highlight the current tag in the taglist window. By default, the taglist
+plugin periodically updates the taglist window to highlight the current tag.
+The ":TlistSync" command can be used to force the taglist plugin to highlight
+the current tag.
 
 TlistShowPrototype~
-You can use the ":TlistShowPrototype" command to display the prototype
-of a function in the specified line number.
+Display the prototype of the tag near the specified line number. If the line
+number is not specified, the current line number is used. A tag spans multiple
+lines starting from the line where it is defined to the line before the next
+tag. The ":TlistShowPrototype" command displays the prototype for the tag for
+any line number in this range. 
+
+TlistShowTag~
+Display the name of the tag defined near the specified line number. If the
+line number is not specified, the current line number is used. A tag spans
+multiple lines starting from the line where it is defined to the line before
+the next tag. The ":TlistShowTag" command displays the tag name for any line
+number in this range. 
 
 TlistSessionSave~
-You can save the tags displayed in the taglist window to a file using
-the ":TlistSessionSave" command.
+Save the information about files and tags displayed in the taglist window to
+the specified session file.
 
 TlistSessionLoad~
-You can load a taglist session from a file using the ":TlistSessionLoad"
-command.
+Load information about files and tags stored from the specified session file
+and update the taglist window with those files.
 
 ==============================================================================
 						*taglist-extend*
@@ -486,6 +547,9 @@ tool, which includes the following languages: Assembly ASP, Awk, Beta, C, C++,
 C#, Cobol, Eiffel, Erlang, Fortran, HTML, Java, Javascript, Lisp, Lua, Make,
 Pascal, Perl, PHP, Python, Rexx, Ruby, Scheme, Shell, Slang, SML, Sql, TCL,
 Verilog, Vim and Yacc.
+
+You can modify the taglist plugin support for the above listed languages. You
+can also extend the taglist plugin to add support for new languages.
 
 If you want to add support for a new language to the taglist plugin, you need
 to first extend the exuberant ctags tool. For more information about extending
@@ -502,6 +566,9 @@ in the buffer containing the desired file: >
 
               :set filetype
 <
+For example, to modify the support for the perl language files, you have to
+set the tlist_perl_settings variable.
+
 The format of the value set in the tlist_xxx_settings variable is >
 
          <language_name>;flag1:name1;flag2:name2;flag3:name3
@@ -517,7 +584,8 @@ functions, the 'f' flag should be used. For more information about the flags
 supported by exuberant ctags for a particular language, read the help text
 from the 'ctags --help' comand. The sub-field 'name' specifies the title
 text to use for displaying the tags of a particular type. For example,
-'name' can be set to 'functions'.
+'name' can be set to 'functions'. This field can be set to any text
+string name.
 
 For example, to list only the classes and functions defined in a C++
 language file, add the following lines to your .vimrc file >
@@ -534,8 +602,22 @@ Functions" as the title for the function group, use >
 
       let tlist_c_settings = 'c;f:My Functions'
 <
+When you set the tlist_xxx_settings variable, you will override the default
+setting used by the taglist plugin for the 'xxx' language. You cannot add to
+the options used by the taglist plugin for a particular file type.
+
 To add support for a new language, set the tlist_xxx_settings variable
-appropriately as described above.
+appropriately as described above. For example, to extend the taglist plugin
+to support the latex language, you can use the following line (assuming, you
+have already extended exuberant ctags to support the latex language): >
+
+    let tlist_tex_settings='latex;b:bibitem;c:command;l:label'
+<
+With the above line, when you edit files of filetype "tex" in Vim, the taglist
+plugin will invoke the exuberant ctags tool with the "latex" filetype and with
+the flags b, c and l to generate the tags. The text heading 'bibitem',
+'command' and 'label' will be used for the tags which are generated for the
+flags b, c and l respectively.
 
 ==============================================================================
 						*taglist-faq*
