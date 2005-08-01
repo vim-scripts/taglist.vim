@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2005 April 4
+Last change: 2005 August 1
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -250,10 +250,15 @@ width/height without closing the other existing windows. You can again press
 'x' to restore the taglist window to the default width/height.
 
 Updating the tags displayed for a file~
-You can update or refresh the tags displayed for a file by pressing the "u"
-key in the taglist window. If an existing file is modified, after the file is
-saved, the taglist plugin will automatically update the tags displayed for the
-file.
+The taglist plugin keeps track of the modification time of a file. When the
+modification time changes (the file is modified), the taglist plugin will
+automatically update the tags listed for that file. The modification time is
+checked when you enter a window containing the file or when you load the file.
+
+You can also update or refresh the tags displayed for a file by pressing the
+"u" key in the taglist window. If an existing file is modified, after the file
+is saved, the taglist plugin will automatically update the tags displayed for
+the file.
 
 You can also use the ":TlistUpdate" command to update the tags for the current
 buffer after you made some changes to it. You should save the modified buffer
@@ -263,6 +268,17 @@ include the new tags created in the buffer.
 If you have deleted the tags displayed for a file in the taglist window using
 the 'd' key, you can again display the tags for that file using the
 ':TlistUpdate' command.
+
+Adding multiples files to the taglist window~
+You can add the tags defined in a file(s) without opening it using the
+":TlistAddFiles" command. For example, to add the tags defined in all
+the C files in a directory, you can use the following command:
+
+    :TlistAddFiles my/project/dir/*.c
+
+Note that if you try to add several files with a large number of tags or a
+large number of files, then it will take several seconds to minutes for the
+taglist plugin to process all the files.
 
 Modifying the contents of the taglist buffer/window~
 The contents of the taglist buffer/window are managed by the taglist plugin.
@@ -448,32 +464,67 @@ should use the |let| command in your .vimrc file to change the setting of any
 of these variables. 
 
 The configurable taglist variables are listed below. For a detailed
-description of these variables refer to the text after this table.
+description of these variables refer to the text below this table.
 
+|'Tlist_Auto_Highlight_Tag'|	Highlight the current tag in the taglist.
+|'Tlist_Auto_Open'|		Open the taglist window when Vim starts.
+|'Tlist_Compact_Format'|	Remove extra information and blank lines from
+       				the taglist window.
 |'Tlist_Ctags_Cmd'|		Specifies the path to the ctags utility.
-|'Tlist_Sort_Type'|		Sort method used for arranging the tags.
-|'Tlist_Use_Horiz_Window'|	Use a horizontal split window for the taglist.
-|'Tlist_Use_Right_Window'|	Put the taglist window on the right side.
-|'Tlist_Auto_Open'|		Open the taglist window when VIM starts.
 |'Tlist_Display_Prototype'|	Show prototypes, not just tags.
 |'Tlist_Display_Tag_Scope'|	Show tag scope next to the tag name.
-|'Tlist_Show_One_File'|		Show tags for the current buffer only.
-|'Tlist_WinWidth'|		Set the taglist window width.
-|'Tlist_Inc_Winwidth'|		Expand the current window to accommodate the
-       				taglist.
-|'Tlist_WinHeight'|		If horizontal is set, set the window height.
-|'Tlist_Use_SingleClick'|	Single click on a tag jumps to it.
-|'Tlist_Compact_Format'|	Remove extra information and blank lines from
-       				the taglist.
+|'Tlist_Enable_Fold_Column'|	Show the fold indicator column.
 |'Tlist_Exit_OnlyWindow'|	Close VIM if the taglist is the only window.
 |'Tlist_File_Fold_Auto_Close'|	Close tag folds for all buffers not shown.
-|'Tlist_Enable_Fold_Column'|	Show the fold indicator column.
-|'Tlist_Auto_Highlight_Tag'|	Highlight the current tag in the taglist.
-|'Tlist_Process_File_Always'|	Process tags for files when taglist is closed.
-|'Tlist_Show_Menu'|		Display the tags menu.
+|'Tlist_Inc_Winwidth'|		Expand the current window to accommodate the
+       				taglist window.
 |'Tlist_Max_Submenu_Items'|	Maximum number of items in a tags sub-menu.
 |'Tlist_Max_Tag_Length'|	Maximum tag length used in a tag menu entry.
+|'Tlist_Process_File_Always'|	Process tags for files when the taglist window 
+				is closed.
+|'Tlist_Show_Menu'|		Display the tags menu.
+|'Tlist_Show_One_File'|		Show tags for the current buffer only.
+|'Tlist_Sort_Type'|		Sort method used for arranging the tags.
+|'Tlist_Use_Horiz_Window'|	Use a horizontally split window for the
+				taglist window.
+|'Tlist_Use_Right_Window'|	Put the taglist window on the right side.
+|'Tlist_Use_SingleClick'|	Single click on a tag jumps to it.
+|'Tlist_WinHeight'|		Horizontally split taglist window height.
+|'Tlist_WinWidth'|		Vertically split taglist window width.
 
+						*'Tlist_Auto_Highlight_Tag'*
+Tlist_Auto_Highlight_Tag~
+By default, the taglist plugin will highlight the current tag in the taglist
+window. If you want to disable the highlighting of the current tag, then you
+can set the Tlist_Auto_Highlight_Tag variable to zero. Note that even though
+the current tag highlighting is disabled, the tags for a new file will still
+be added to the taglist window.
+>
+	let Tlist_Auto_Highlight_Tag = 0
+<
+You can still use the ':TlistSync' command to highlight the current tag.
+
+						*'Tlist_Auto_Open'*
+Tlist_Auto_Open~
+To automatically open the taglist window, when you start Vim, you can set the
+'Tlist_Auto_Open' variable to 1. By default, this variable is set to 0 and the
+taglist window will not be opened automatically on Vim startup. >
+
+	let Tlist_Auto_Open = 1
+<
+The taglist window is opened only when a supported type of file is opened on
+Vim startup. For example, if you open text files, then the taglist window will
+not be opened.
+
+						*'Tlist_Compact_Format'*
+Tlist_Compact_Format~
+By default, empty lines are used to separate different tag types displayed for
+a file and the tags displayed for different files in the taglist window. If
+you want to display as many tags as possible in the taglist window, you can
+set the Tlist_Compact_Format variable to one to get a compact display. >
+
+	let Tlist_Compact_Format = 1
+<
 						*'Tlist_Ctags_Cmd'*
 Tlist_Ctags_Cmd~
 The 'Tlist_Ctags_Cmd' variable specifies the location (path) of the exuberant
@@ -496,6 +547,128 @@ loaded.
 >
 	let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe'
 	let Tlist_Ctags_Cmd = '/usr/local/bin/ctags'
+<
+						*'Tlist_Display_Prototype'*
+Tlist_Display_Prototype~
+By default, only the tag name will be displayed in the taglist window. If you
+like to see tag prototypes instead of names, set the 'Tlist_Display_Prototype'
+variable to 1. By default, this variable is set to 0 and only tag names will
+be displayed. >
+
+	let Tlist_Display_Prototype = 1
+<
+						*'Tlist_Display_Tag_Scope'*
+Tlist_Display_Tag_Scope~
+By default, the scope of a tag (like a C++ class) will be displayed in
+square brackets next to the tag name. If you don't want the tag scopes
+to be displayed, then set the 'Tlist_Display_Tag_Scope' to 0. By default,
+this variable is set to 1 and the tag scopes will be displayed. >
+
+	let Tlist_Display_Tag_Scope = 0
+<
+						*'Tlist_Enable_Fold_Column'*
+Tlist_Enable_Fold_Column~
+By default, the Vim fold column is enabled and displayed in the taglist
+window. If you wish to disable this (for example, when you are working with a
+narrow Vim window or terminal), you can set the Tlist_Enable_Fold_Column
+variable to 0.
+>
+	let Tlist_Enable_Fold_Column = 1
+<
+						*'Tlist_Exit_OnlyWindow'*
+Tlist_Exit_OnlyWindow~
+If you want to exit Vim if only the taglist window is currently opened, then
+set the Tlist_Exit_OnlyWindow variable to one. By default, this variable is
+set to zero and the Vim instance will not be closed if only the taglist window
+is present. >
+
+	let Tlist_Exit_OnlyWindow = 1
+<
+						*'Tlist_File_Fold_Auto_Close'*
+Tlist_File_Fold_Auto_Close~
+By default, the tags tree displayed in the taglist window for all the files is
+opened. You can close/fold the tags tree for the files manually. To
+automatically close the tags tree for inactive files, you can set the
+Tlist_File_Fold_Auto_Close variable to 1. When this variable is set to 1, if a
+Vim buffer is no longer displayed in a Vim window, the corresponding tags tree
+in the taglist window will be collapsed/folded. When a buffer is loaded in a
+Vim window, the corresponding tags tree will be opened.
+>
+	let Tlist_File_Fold_Auto_Close = 1
+<
+						*'Tlist_Inc_Winwidth'*
+Tlist_Inc_Winwidth~
+By default, when the width of the window is less than 100 and a new taglist
+window is opened vertically, then the window width will be increased by the
+value set in the Tlist_WinWidth variable to accommodate the new window. The
+value of this variable is used only if you are using a vertically split
+taglist window.
+
+If your terminal doesn't support changing the window width from Vim (older
+version of xterm running in a Unix system) or if you see any weird problems in
+the screen due to the change in the window width or if you prefer not to
+adjust the window width then set the 'Tlist_Inc_Winwidth' variable to 0.
+CAUTION: If you are using the MS-Windows version of Vim in a MS-DOS command
+window then you must set this variable to 0, otherwise the system may hang due
+to a Vim limitation (explained in :help win32-problems) >
+
+	let Tlist_Inc_Winwidth = 0
+<
+						*'Tlist_Max_Submenu_Items'*
+Tlist_Max_Submenu_Items~
+If a file contains too many tags of a particular type (function, variable,
+class, etc.), greater than that specified by the Tlist_Max_Submenu_Items
+variable, then the menu for that tag type will be split into multiple
+sub-menus. The default setting for the Tlist_Max_Submenu_Items variable is 25.
+This can be changed by setting the Tlist_Max_Submenu_Items variable:
+>
+	let Tlist_Max_Submenu_Items = 20
+<
+The name of the submenu is formed using the names of the first and the last
+tag entries in that submenu.
+
+						*'Tlist_Max_Tag_Length'*
+Tlist_Max_Tag_Length~
+Only the first Tlist_Max_Tag_Length characters from the tag names will be used
+to form the tag type submenu name. Change the Tlist_Max_Tag_Length setting if
+you want to include more or less characters:
+>
+	let Tlist_Max_Tag_Length = 10
+<
+						*'Tlist_Process_File_Always'*
+Tlist_Process_File_Always~
+By default, the taglist plugin will generate and process the tags defined in
+the newly opened files only when the taglist window is opened or when the
+taglist menu is enabled. When the taglist window is closed, the taglist plugin
+will stop processing the tags for newly opened files.
+
+You can set the Tlist_Process_File_Always variable to 1 to generate the list
+of tags for new files even when the taglist window is closed and the taglist
+menu is disabled.
+>
+	let Tlist_Process_File_Always = 1
+<
+You should set this variable to 1, if you want to use the :TlistShowTag and
+:TlistShowPrototype commands without the taglist window and the taglist menu.
+
+						*'Tlist_Show_Menu'*
+Tlist_Show_Menu~
+When using GUI Vim, you can display the tags defined in the current file in a
+menu named "Tags". By default, this feature is turned off. To turn on this
+feature, set the Tlist_Show_Menu variable to one:
+>
+	let Tlist_Show_Menu = 1
+<
+						*'Tlist_Show_One_File'*
+Tlist_Show_One_File~
+By default, the taglist plugin will display the tags defined in all the loaded
+buffers in the taglist window. If you prefer to display the tags defined only
+in the current buffer, then you can set the 'Tlist_Show_One_File' to 1. When
+this variable is set to 1, as you switch between buffers, the taglist window
+will be refreshed to display the tags for the current buffer and the tags for
+the previous buffer will be removed.
+>
+	let Tlist_Show_One_File = 1
 <
 						*'Tlist_Sort_Type'*
 Tlist_Sort_Type~
@@ -529,80 +702,6 @@ side. If you prefer to open the window on the right hand side, you can set the
 
 	let Tlist_Use_Right_Window = 1
 <
-						*'Tlist_Auto_Open'*
-Tlist_Auto_Open~
-To automatically open the taglist window, when you start Vim, you can set the
-'Tlist_Auto_Open' variable to 1. By default, this variable is set to 0 and the
-taglist window will not be opened automatically on Vim startup. >
-
-	let Tlist_Auto_Open = 1
-<
-						*'Tlist_Display_Prototype'*
-Tlist_Display_Prototype~
-By default, only the tag name will be displayed in the taglist window. If you
-like to see tag prototypes instead of names, set the 'Tlist_Display_Prototype'
-variable to 1. By default, this variable is set to 0 and only tag names will
-be displayed. >
-
-	let Tlist_Display_Prototype = 1
-<
-						*'Tlist_Display_Tag_Scope'*
-Tlist_Display_Tag_Scope~
-By default, the scope of a tag (like a C++ class) will be displayed in
-square brackets next to the tag name. If you don't want the tag scopes
-to be displayed, then set the 'Tlist_Display_Tag_Scope' to 0. By default,
-this variable is set to 1 and the tag scopes will be displayed. >
-
-	let Tlist_Display_Tag_Scope = 0
-<
-						*'Tlist_Show_One_File'*
-Tlist_Show_One_File~
-By default, the taglist plugin will display the tags defined in all the loaded
-buffers in the taglist window. If you prefer to display the tags defined only
-in the current buffer, then you can set the 'Tlist_Show_One_File' to 1. When
-this variable is set to 1, as you switch between buffers, the taglist window
-will be refreshed to display the tags for the current buffer and the tags for
-the previous buffer will be removed.
->
-	let Tlist_Show_One_File = 1
-<
-						*'Tlist_WinWidth'*
-Tlist_WinWidth~
-The default width of the vertically split taglist window is 30. This can be
-changed by modifying the 'Tlist_WinWidth' variable: >
-
-	let Tlist_WinWidth = 20
-<
-Note that the value of the |winwidth| option setting determines the minimum
-width of the current window. If you set the 'Tlist_WinWidth' variable to a
-value less than that of the |winwidth| option setting, then Vim will use the
-value of the |winwidth| option.
-
-						*'Tlist_Inc_Winwidth'*
-Tlist_Inc_Winwidth~
-By default, when the width of the window is less than 100 and a new taglist
-window is opened vertically, then the window width will be increased by the
-value set in the Tlist_WinWidth variable to accommodate the new window. The
-value of this variable is used only if you are using a vertically split
-taglist window.
-
-If your terminal doesn't support changing the window width from Vim (older
-version of xterm running in a Unix system) or if you see any weird problems in
-the screen due to the change in the window width or if you prefer not to
-adjust the window width then set the 'Tlist_Inc_Winwidth' variable to 0.
-CAUTION: If you are using the MS-Windows version of Vim in a MS-DOS command
-window then you must set this variable to 0, otherwise the system may hang due
-to a Vim limitation (explained in :help win32-problems) >
-
-	let Tlist_Inc_Winwidth = 0
-<
-						*'Tlist_WinHeight'*
-Tlist_WinHeight~
-The default height of the horizontally split taglist window is 10. This can be
-changed by modifying the 'Tlist_WinHeight' variable: >
-
-	let Tlist_WinHeight = 20
-<
 						*'Tlist_Use_SingleClick'*
 Tlist_Use_SingleClick~
 By default, when you double click on the tag name using the left mouse 
@@ -619,100 +718,33 @@ will be available in Vim 6.3 and above. In the meantime, instead of resizing
 the taglist window using the mouse, you can use normal Vim window resizing
 commands to resize the taglist window.
 
-						*'Tlist_Compact_Format'*
-Tlist_Compact_Format~
-By default, empty lines are used to separate different tag types displayed for
-a file and the tags displayed for different files in the taglist window. If
-you want to display as many tags as possible in the taglist window, you can
-set the Tlist_Compact_Format variable to one to get a compact display. >
+						*'Tlist_WinHeight'*
+Tlist_WinHeight~
+The default height of the horizontally split taglist window is 10. This can be
+changed by modifying the 'Tlist_WinHeight' variable: >
 
-	let Tlist_Compact_Format = 1
+	let Tlist_WinHeight = 20
 <
-						*'Tlist_Exit_OnlyWindow'*
-Tlist_Exit_OnlyWindow~
-If you want to exit Vim if only the taglist window is currently opened, then
-set the Tlist_Exit_OnlyWindow variable to one. By default, this variable is
-set to zero and the Vim instance will not be closed if only the taglist window
-is present. >
+The 'winfixheight' option is set for the the taglist window, to maintain the
+height of the taglist window, when new Vim windows are opened and existing
+windows are closed.
 
-	let Tlist_Exit_OnlyWindow = 1
-<
-						*'Tlist_File_Fold_Auto_Close'*
-Tlist_File_Fold_Auto_Close~
-By default, the tags tree displayed in the taglist window for all the files is
-opened. You can close/fold the tags tree for the files manually. To
-automatically close the tags tree for inactive files, you can set the
-Tlist_File_Fold_Auto_Close variable to 1. When this variable is set to 1, if a
-Vim buffer is no longer displayed in a Vim window, the corresponding tags tree
-in the taglist window will be collapsed/folded. When a buffer is loaded in a
-Vim window, the corresponding tags tree will be opened.
->
-	let Tlist_File_Fold_Auto_Close = 1
-<
-						*'Tlist_Enable_Fold_Column'*
-Tlist_Enable_Fold_Column~
-By default, the Vim fold column is enabled and displayed in the taglist
-window. If you wish to disable this (for example, when you are working with a
-narrow Vim window or terminal), you can set the Tlist_Enable_Fold_Column
-variable to 0.
->
-	let Tlist_Enable_Fold_Column = 1
-<
-						*'Tlist_Auto_Highlight_Tag'*
-Tlist_Auto_Highlight_Tag~
-By default, the taglist plugin will highlight the current tag in the taglist
-window. If you want to disable the highlighting of the current tag, then you
-can set the Tlist_Auto_Highlight_Tag variable to zero. Note that even though
-the current tag highlighting is disabled, the tags for a new file will still
-be added to the taglist window.
->
-	let Tlist_Auto_Highlight_Tag = 0
-<
-						*'Tlist_Process_File_Always'*
-Tlist_Process_File_Always~
-By default, the taglist plugin will generate and process the tags defined in
-the newly opened files only when the taglist window is opened or when the
-taglist menu is enabled. When the taglist window is closed, the taglist plugin
-will stop processing the tags for newly opened files.
+						*'Tlist_WinWidth'*
+Tlist_WinWidth~
+The default width of the vertically split taglist window is 30. This can be
+changed by modifying the 'Tlist_WinWidth' variable: >
 
-You can set the Tlist_Process_File_Always variable to 1 to generate the list
-of tags for new files even when the taglist window is closed and the taglist
-menu is disabled.
->
-	let Tlist_Process_File_Always = 1
+	let Tlist_WinWidth = 20
 <
-You should set this variable to 1, if you want to use the :TlistShowTag and
-:TlistShowPrototype commands without the taglist window and the taglist menu.
+Note that the value of the |winwidth| option setting determines the minimum
+width of the current window. If you set the 'Tlist_WinWidth' variable to a
+value less than that of the |winwidth| option setting, then Vim will use the
+value of the |winwidth| option.
 
-						*'Tlist_Show_Menu'*
-Tlist_Show_Menu~
-When using GUI Vim, you can display the tags defined in the current file in a
-menu named "Tags". By default, this feature is turned off. To turn on this
-feature, set the Tlist_Show_Menu variable to one:
->
-	let Tlist_Show_Menu = 1
-<
-						*'Tlist_Max_Submenu_Items'*
-Tlist_Max_Submenu_Items~
-If a file contains too many tags of a particular type (function, variable,
-class, etc.), greater than that specified by the Tlist_Max_Submenu_Items
-variable, then the menu for that tag type will be split into multiple
-sub-menus. The default setting for the Tlist_Max_Submenu_Items variable is 25.
-This can be changed by setting the Tlist_Max_Submenu_Items variable:
->
-	let Tlist_Max_Submenu_Items = 20
-<
-The name of the submenu is formed using the names of the first and the last
-tag entries in that submenu.
+When new Vim windows are opened and existing windows are closed, the taglist
+plugin will try to maintain the width of the taglist window to the size
+specified by the Tlist_WinWidth variable.
 
-						*'Tlist_Max_Tag_Length'*
-Tlist_Max_Tag_Length~
-Only the first Tlist_Max_Tag_Length characters from the tag names will be used
-to form the tag type submenu name. Change the Tlist_Max_Tag_Length setting if
-you want to include more or less characters:
->
-	let Tlist_Max_Tag_Length = 10
-<
 ==============================================================================
 						*taglist-commands*
 7. Commands~
@@ -720,18 +752,21 @@ you want to include more or less characters:
 The taglist plugin provides the following ex-mode commands:
 
 |:Tlist|		Open or close (toggle) the taglist window.
+|:TlistAddFiles|	Add multiple files to the taglist window.
 |:TlistClose|		Close the taglist window.
-|:TlistUpdate|		Update the tags for the current buffer.
-|:TlistSync|		Highlight the current tag in the taglist window.
-|:TlistShowPrototype|	Display the prototype of the tag at or below the
-		    	specified line number.
-|:TlistShowTag|		Display the name of the tag defined at or below the
-		    	specified line number.
-|:TlistSessionSave|	Save the information about files and tags in use.
-|:TlistSessionLoad|	Load information about files and tags last saved.
 |:TlistDebug|		Start logging of taglist debug messages.
-|:TlistUndebug|		Stop logging of taglist debug messages.
 |:TlistMessages|	Display the logged taglist plugin debug messages.
+|:TlistSessionSave|	Save the information about files and tags displayed
+			in the taglist window to a session file.
+|:TlistSessionLoad|	Load the information about files and tags stored
+			in a session file to the taglist window.
+|:TlistShowPrototype|	Display the prototype of the tag at or above the
+		    	specified line number.
+|:TlistShowTag|		Display the name of the tag defined at or above the
+		    	specified line number.
+|:TlistSync|		Highlight the current tag in the taglist window.
+|:TlistUndebug|		Stop logging of taglist debug messages.
+|:TlistUpdate|		Update the tags for the current buffer.
 
 						*:Tlist*
 :Tlist		Open or close (toggle) the taglist window. Opens the taglist
@@ -741,24 +776,39 @@ The taglist plugin provides the following ex-mode commands:
 		in the buffer list are processed and the tags are displayed in
 		the taglist window.
 
+						*:TlistAddFiles*
+:TlistAddFiles {file(s)} [file(s) ...]
+		Process the tags defined in the specified file(s) and add them
+		to the taglist window. The files will not be edited and will
+		not be added to the Vim buffer list. You can specify
+		filenames using patterns.
+
 						*:TlistClose*
 :TlistClose	Close the taglist window. This command can be used from any
 		one of the Vim windows.
 
-						*:TlistUpdate*
-:TlistUpdate	Update the tags displayed for the current buffer. This
-		command can be used to force an update of the tags for the
-		current file/buffer. As the taglist plugin uses the file saved
-		in the disk (instead of the file displayed in a Vim buffer),
-		you should save the modified buffer before you update the
-		taglist window. Otherwise the listed tags will not include the
-		new tags created in the buffer.
+						*:TlistDebug*
+:TlistDebug
+		Start logging of debug messages from the taglist plugin.
+		The debug messages are stored in a script local variable by
+		the taglist plugin.
 
-						*:TlistSync*
-:TlistSync	Highlight the current tag in the taglist window. By default,
-		the taglist plugin periodically updates the taglist window to
-		highlight the current tag. This command can be used to force
-		the taglist plugin to highlight the current tag.
+						*:TlistMessages*
+:TlistMessages
+		Display the logged debug messages from the taglist plugin.
+
+						*:TlistSessionSave*
+:TlistSessionSave {filename}
+		Save the information about files and tags displayed in the
+		taglist window to the specified file. This command can be used
+		to save and restore the taglist window contents across Vim
+		sessions.
+
+						*:TlistSessionLoad*
+:TlistSessionLoad {filename}
+		Load the information about files and tags stored in the
+		specified session file and update the taglist window with
+		the tags stored in the session file.
 
 						*:TlistShowPrototype*
 :TlistShowPrototype [filename] [linenumber]
@@ -779,32 +829,24 @@ The taglist plugin provides the following ex-mode commands:
 		it is defined to the line before the next tag. This command
 		displays the tag name for any line number in this range. 
 
-						*:TlistSessionSave*
-:TlistSessionSave {filename}
-		Save the information about files and tags displayed in the
-		taglist window to the specified file. This command can be used
-		to save and restore the taglist window contents across Vim
-		sessions.
-
-						*:TlistSessionLoad*
-:TlistSessionLoad {filename}
-		Load the information about files and tags stored in the
-		specified session file and update the taglist window with
-		the tags stored in the session file.
-
-						*:TlistDebug*
-:TlistDebug
-		Start logging of debug messages from the taglist plugin.
-		The debug messages are stored in a script local variable by
-		the taglist plugin.
+						*:TlistSync*
+:TlistSync	Highlight the current tag in the taglist window. By default,
+		the taglist plugin periodically updates the taglist window to
+		highlight the current tag. This command can be used to force
+		the taglist plugin to highlight the current tag.
 
 						*:TlistUndebug*
 :TlistUndebug
 		Stop logging of debug messages from the taglist plugin.
 
-						*:TlistMessages*
-:TlistMessages
-		Display the logged debug messages from the taglist plugin.
+						*:TlistUpdate*
+:TlistUpdate	Update the tags displayed for the current buffer. This
+		command can be used to force an update of the tags for the
+		current file/buffer. As the taglist plugin uses the file saved
+		in the disk (instead of the file displayed in a Vim buffer),
+		you should save the modified buffer before you update the
+		taglist window. Otherwise the listed tags will not include the
+		new tags created in the buffer.
 
 ==============================================================================
 						*taglist-functions*
@@ -1016,6 +1058,19 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
    name, then try adding the directory to the PATH environment variable or try
    copying the exuberant ctags to a path without space characters in the name.
 
+Q. When I try to open the taglist window, I am seeing the following error
+   message. How do I fix this problem?
+
+   Taglist: Failed to generate tags for /my/path/to/file
+   ctags: illegal option -- -^@usage: ctags [-BFadtuwvx] [-f tagsfile] file ...
+
+A. The taglist plugin will work only with the exuberant ctags tool. You
+   cannot use the GNU ctags or the Unix ctags program with the taglist plugin.
+   You will see an error message similar to the one shown above, if you try
+   use a non-exuberant ctags program with Vim. To fix this problem, either add
+   the exuberant ctags tool location to the PATH environment variable or set
+   the Tlist_Ctags_Cmd variable.
+
 Q. A file has more than one tag with the same name. When I select a tag name
    from the taglist window, the cursor is positioned at the incorrect tag
    location. 
@@ -1058,9 +1113,9 @@ A. The taglist plugin uses the |CursorHold| autocmd to highlight the current
 						*taglist-todo*
 11. Todo~
 
-1. Support for displaying tags in a modified (not-yet-saved) file. 
-2. Group tags according to the scope and display them. For example,
+1. Group tags according to the scope and display them. For example,
    group all the tags belonging to a C++/Java class 
+2. Support for displaying tags in a modified (not-yet-saved) file. 
 3. Automatically open the taglist window only for selected filetypes.
    For other filetypes, close the taglist window. 
 4. Taglist plugin doesn't work properly with the Vim session support.

@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.0 Beta1
-" Last Modified: April 4, 2005
+" Version: 4.0 Beta 2
+" Last Modified: July 21, 2005
 "
 " The "Tag List" plugin is a source code browser plugin for Vim and provides
 " an overview of the structure of the programming language files and allows
@@ -458,7 +458,8 @@ function! s:Tlist_Log_Msg(msg)
         if len > 3000
             let s:tlist_msg = strpart(s:tlist_msg, len - 3000)
         endif
-        let s:tlist_msg = s:tlist_msg . strftime('%T') . ': ' . a:msg . "\n"
+        let s:tlist_msg = s:tlist_msg . strftime('%H:%M:%S') . ': ' . 
+                    \ a:msg . "\n"
     endif
 endfunction
 
@@ -537,8 +538,7 @@ endfunction
 " Tlist_User_Removed_File
 " Returns 1 if a file is removed by a user from the taglist
 function! s:Tlist_User_Removed_File(filename)
-    let esc_fname = escape(a:filename, '\') . "\n"
-    return match(s:tlist_removed_flist, esc_fname) != -1
+    return stridx(s:tlist_removed_flist, a:filename . "\n") != -1
 endfunction
 
 " Tlist_Update_Remove_List
@@ -549,9 +549,13 @@ function! s:Tlist_Update_Remove_List(filename, add)
     if a:add
         let s:tlist_removed_flist = s:tlist_removed_flist . a:filename . "\n"
     else
-        let esc_fname = escape(a:filename, '\') . "\n"
-        let s:tlist_removed_flist = substitute(s:tlist_removed_flist,
-                    \ esc_fname, '', '')
+        let idx = stridx(s:tlist_removed_flist, a:filename . "\n")
+        let text_before = strpart(s:tlist_removed_flist, 0, idx)
+        let rem_text = strpart(s:tlist_removed_flist, idx)
+        let next_idx = stridx(rem_text, "\n")
+        let text_after = strpart(rem_text, next_idx + 1)
+
+        let s:tlist_removed_flist = text_before . text_after
     endif
 endfunction
 
@@ -912,8 +916,13 @@ function! s:Tlist_Open_Window()
         " needed, to accomodate the new window
         if g:Tlist_Inc_Winwidth &&
                     \ &columns < (80 + g:Tlist_WinWidth)
+            " Save the original window position
+            let s:tlist_pre_winx = getwinposx()
+            let s:tlist_pre_winy = getwinposy()
+
             " one extra column is needed to include the vertical split
             let &columns= &columns + g:Tlist_WinWidth + 1
+
             let s:tlist_winsize_chgd = 1
         else
             let s:tlist_winsize_chgd = 0
@@ -943,6 +952,10 @@ function! s:Tlist_Open_Window()
     " Create the taglist window
     exe 'silent! ' . win_dir . ' ' . win_size . 'split ' . wcmd
 
+    " Save the new window position
+    let s:tlist_winx = getwinposx()
+    let s:tlist_winy = getwinposy()
+
     " Initialize the taglist window
     call s:Tlist_Init_Window()
 endfunction
@@ -967,6 +980,32 @@ function! s:Tlist_Zoom_Window()
             vert resize
         endif
         let s:tlist_win_maximized = 1
+    endif
+endfunction
+
+" Tlist_Check_Window_Size
+" Check the width of the taglist window. For horizontally split windows, the
+" 'winfixheight' option is used to fix the height of the window. For
+" vertically split windows, Vim doesn't support the 'winfixwidth' option. So
+" need to handle window width changes from this function.
+function! s:Tlist_Check_Window_Width()
+    let tlist_winnr = bufwinnr(g:TagList_title)
+    if tlist_winnr == -1
+        return
+    endif
+
+    let width = winwidth(tlist_winnr)
+    if width != g:Tlist_WinWidth
+        call s:Tlist_Log_Msg("Tlist_Check_Window_Width: Changing window " .
+                    \ "width from " . width . "to " . g:Tlist_WinWidth)
+        let save_winnr = winnr()
+        if save_winnr != tlist_winnr
+            exe tlist_winnr . 'wincmd w'
+        endif
+        exe 'vert resize ' . g:Tlist_WinWidth
+        if save_winnr != tlist_winnr
+            wincmd p
+        endif
     endif
 endfunction
 
@@ -1051,6 +1090,13 @@ function! s:Tlist_Init_Window()
     " taglist window. So forcefully disable 'number' option for the taglist
     " window
     silent! setlocal nonumber
+
+    " Use fixed height when horizontally split window is used
+    if g:Tlist_Use_Horiz_Window
+        if v:version >= 602
+            set winfixheight
+        endif
+    endif
 
     " Setup the cpoptions properly for the maps to work
     let old_cpoptions = &cpoptions
@@ -1138,24 +1184,32 @@ function! s:Tlist_Init_Window()
         " Display the tag prototype for the tag under the cursor.
         autocmd CursorHold __Tag_List__ call s:Tlist_Show_Tag_Prototype()
         " Highlight the current tag periodically
-        autocmd CursorHold * silent call <SID>Tlist_Highlight_Tag(
-                                \ fnamemodify(bufname('%'), ':p'), line('.'), 1)
+        autocmd CursorHold * silent call s:Tlist_Highlight_Tag(
+                            \ fnamemodify(bufname('%'), ':p'), line('.'), 1, 0)
 
         " Adjust the Vim window width when taglist window is closed
-        autocmd BufUnload __Tag_List__ call <SID>Tlist_Post_Close_Cleanup()
+        autocmd BufUnload __Tag_List__ call s:Tlist_Post_Close_Cleanup()
         " Close the fold for this buffer when it's not visible in any window
-        autocmd BufWinLeave * silent call <SID>Tlist_Update_File_Display(
+        if g:Tlist_File_Fold_Auto_Close
+            autocmd BufWinLeave * silent call s:Tlist_Update_File_Display(
                                 \ fnamemodify(expand('<afile>'), ':p'), 1)
+        endif
         " Remove the file from the list when it's buffer is deleted
-        autocmd BufDelete * silent call <SID>Tlist_Update_File_Display(
+        autocmd BufDelete * silent call s:Tlist_Update_File_Display(
                                 \ fnamemodify(expand('<afile>'), ':p'), 2)
         " Exit Vim itself if only the taglist window is present (optional)
-        autocmd BufEnter __Tag_List__ call <SID>Tlist_Check_Only_Window()
+        if g:Tlist_Exit_OnlyWindow
+            autocmd BufEnter __Tag_List__ if winbufnr(2) == -1 | quit | endif
+        endif
         if s:tlist_app_name != "winmanager" &&
                     \ !g:Tlist_Process_File_Always &&
                     \ (!has('gui_running') || !g:Tlist_Show_Menu)
             " Auto refresh the taglist window
-            autocmd BufEnter * call <SID>Tlist_Refresh()
+            autocmd BufEnter * call s:Tlist_Refresh()
+        endif
+
+        if !g:Tlist_Use_Horiz_Window
+            autocmd WinEnter * call s:Tlist_Check_Window_Width()
         endif
     augroup end
 
@@ -1258,6 +1312,14 @@ function! s:Tlist_Post_Close_Cleanup()
         " window or if columns is less than 101 or if the user chose not to
         " adjust the window width
     else
+        " If the user didn't manually move the window, then restore the window
+        " position to the pre-taglist position
+        if s:tlist_pre_winx != -1 && s:tlist_pre_winy != -1 &&
+                    \ getwinposx() == s:tlist_winx &&
+                    \ getwinposy() == s:tlist_winy
+            exe 'winpos ' . s:tlist_pre_winx . ' ' . s:tlist_pre_winy
+        endif
+
         " Adjust the Vim window width
         let &columns= &columns - (g:Tlist_WinWidth + 1)
     endif
@@ -1267,19 +1329,6 @@ function! s:Tlist_Post_Close_Cleanup()
     if s:tlist_app_name == "winmanager"
         let s:tlist_app_name = "none"
         let s:tlist_window_initialized = 0
-    endif
-endfunction
-
-" Tlist_Check_Only_Window
-" Check if only the taglist window is opened currently. If the
-" Tlist_Exit_OnlyWindow variable is set, then close the taglist window
-function! s:Tlist_Check_Only_Window()
-    if g:Tlist_Exit_OnlyWindow
-        if winbufnr(2) == -1 && bufname(winbufnr(1)) == g:TagList_title
-            " If only the taglist window is currently open, then the buffer
-            " number associated with window 2 will be -1.
-            quit
-        endif
     endif
 endfunction
 
@@ -1733,7 +1782,7 @@ function! s:Tlist_Process_File(filename, ftype)
 
     " No tags for current file
     if cmd_output == ''
-        call s:Tlist_Warning_Msg('Taglist: No tags found for ' . a:filename)
+        call s:Tlist_Warning_Msg('Taglist: No tags defined in ' . a:filename)
         return fidx
     endif
 
@@ -1752,7 +1801,7 @@ function! s:Tlist_Process_File(filename, ftype)
         " Process the ctags output one line at a time.  The substitute()
         " command is used to parse the tag lines instead of using the
         " matchstr()/stridx()/strpart() functions for performance reason
-        call substitute(cmd_output, '\(.\{-}\)\n',
+        call substitute(cmd_output, "\\([^\n]\\+\\)\n",
                     \ '\=s:Tlist_Parse_Tagline(submatch(1))', 'g')
 
         " Save the number of tags for this file
@@ -1888,6 +1937,17 @@ function! Tlist_Update_File_Tags(filename, ftype)
         " and return
         call s:Tlist_Process_File(fname, a:ftype)
     else
+        if g:Tlist_Show_One_File && s:tlist_cur_file_idx != -1
+            " If tags for only one file are displayed and we are not
+            " updating the tags for that file, then no need to
+            " refresh the taglist window. Otherwise, the taglist
+            " window should be updated.
+            if s:tlist_{s:tlist_cur_file_idx}_filename != fname
+                call s:Tlist_Process_File(fname, a:ftype)
+                return
+            endif
+        endif
+
         " Save the current window number
         let save_winnr = winnr()
 
@@ -1997,7 +2057,7 @@ function! s:Tlist_Toggle_Window()
     endif
 
     " Highlight the current tag
-    call s:Tlist_Highlight_Tag(curbuf_name, cur_lnum, 1)
+    call s:Tlist_Highlight_Tag(curbuf_name, cur_lnum, 1, 1)
 
     " Go back to the original window
     let prev_Tlist_Skip_Refresh = s:Tlist_Skip_Refresh
@@ -2009,6 +2069,61 @@ function! s:Tlist_Toggle_Window()
     if g:Tlist_Show_Menu
         call s:Tlist_Menu_Update_File(0)
     endif
+endfunction
+
+" Tlist_Add_Files
+" Add the specified list of files to the taglist
+function! s:Tlist_Add_Files(...)
+    let flist = ''
+    let i = 1
+
+    " Get all the files matching the file patterns supplied as argument
+    while i <= a:0
+        let flist = flist . glob(a:{i}) . "\n"
+        let i = i + 1
+    endwhile
+
+    if flist == ''
+        call s:Tlist_Warning_Msg('Error: No matching files are found')
+        return
+    endif
+
+    let flist = flist . "\n"
+
+    " Enable lazy screen updates
+    let old_lazyredraw = &lazyredraw
+    set lazyredraw
+
+    " Ignore the filetype autocommands
+    let old_eventignore = &eventignore
+    set eventignore=FileType
+
+    " Save the 'filetype', as this will be changed temporarily
+    let old_filetype = &filetype
+
+    " Process one file at a time
+    while flist != ''
+        let one_file = strpart(flist, 0, stridx(flist, "\n"))
+
+        let flist = strpart(flist, stridx(flist, "\n") + 1)
+
+        " Run the filetypedetect group of autocommands to determine
+        " the filetype for one_file
+        exe 'doautocmd filetypedetect BufRead ' . one_file
+
+        echon "\r                                        "
+        echon "\rProcessing tags for " . fnamemodify(one_file, ':p:t')
+
+        silent call Tlist_Update_File_Tags(one_file, &filetype)
+    endwhile
+
+    " Clear the displayed informational messages
+    echon "\r                                                            "
+
+    " Restore the previous state
+    let &filetype = old_filetype
+    let &eventignore = old_eventignore
+    let &lazyredraw = old_lazyredraw
 endfunction
 
 " Tlist_Extract_Tagtype
@@ -2112,6 +2227,15 @@ function! s:Tlist_Refresh()
 
     " Update the taglist window
     if tlist_win != -1
+        if g:Tlist_Show_One_File && s:tlist_cur_file_idx != fidx
+            " If displaying tags for only one file in the taglist
+            " window and about to display the tags for a new file,
+            " then center the current tag line for the new file
+            let center_tag_line = 1
+        else
+            let center_tag_line = 0
+        endif
+
         " Disable screen updates
         let old_lazyredraw = &lazyredraw
         set nolazyredraw
@@ -2132,11 +2256,16 @@ function! s:Tlist_Refresh()
         call s:Tlist_Explore_File(filename, ftype)
 
         " Highlight the current tag
-        call s:Tlist_Highlight_Tag(filename, cur_lnum, 1)
+        call s:Tlist_Highlight_Tag(filename, cur_lnum, 1, center_tag_line)
 
         if !g:Tlist_Auto_Highlight_Tag
             " Restore the cursor position
-            call cursor(save_line, save_col)
+            if v:version >= 601
+                call cursor(save_line, save_col)
+            else
+                exe save_line
+                exe 'normal! ' . save_col . '|'
+            endif
         endif
 
         if s:tlist_app_name != "winmanager"
@@ -2256,9 +2385,8 @@ function! s:Tlist_Update_Window()
 endfunction
 
 " Tlist_Get_Tag_Index()
-" Return the tag index for the current line
-function! s:Tlist_Get_Tag_Index(fidx)
-    let lnum = line('.')
+" Return the tag index for the specified line
+function! s:Tlist_Get_Tag_Index(fidx, lnum)
     let ftype = s:tlist_{a:fidx}_filetype
 
     " Determine to which tag type the current line number belongs to using the
@@ -2268,7 +2396,7 @@ function! s:Tlist_Get_Tag_Index(fidx)
         let ttype = s:tlist_{ftype}_{i}_name
         let start_lnum = s:tlist_{a:fidx}_start + s:tlist_{a:fidx}_{ttype}_start
         let end =  start_lnum + s:tlist_{a:fidx}_{ttype}_count
-        if lnum >= start_lnum && lnum <= end
+        if a:lnum >= start_lnum && a:lnum <= end
             break
         endif
         let i = i + 1
@@ -2280,7 +2408,7 @@ function! s:Tlist_Get_Tag_Index(fidx)
     endif
 
     " Compute the index into the displayed tags for the tag type
-    let tidx = lnum - start_lnum
+    let tidx = a:lnum - start_lnum
     if tidx == 0
         return 0
     endif
@@ -2316,18 +2444,24 @@ function! s:Tlist_Jump_To_Tag(win_ctrl)
         return
     endif
 
-    " If inside a fold, then don't try to jump to the tag
-    if foldclosed('.') != -1
-        return
+    " If inside a closed fold, then use the first line of the fold
+    " and jump to the file.
+    let lnum = foldclosed('.')
+    if lnum == -1
+        " Jump to the selected tag or file
+        let lnum = line('.')
+    else
+        " Open the closed fold
+        .foldopen!
     endif
 
-    let fidx = s:Tlist_Get_File_Index_By_Linenum(line('.'))
+    let fidx = s:Tlist_Get_File_Index_By_Linenum(lnum)
     if fidx == -1
         return
     endif
 
     " Get the tag output for the current tag
-    let tidx = s:Tlist_Get_Tag_Index(fidx)
+    let tidx = s:Tlist_Get_Tag_Index(fidx, lnum)
     if tidx != 0
         let tagpat = s:Tlist_Get_Tag_SearchPat(fidx, tidx)
 
@@ -2427,6 +2561,9 @@ function! s:Tlist_Open_File(win_ctrl, filename, tagpat)
 
     " Jump to the tag
     if a:tagpat != ''
+        " Add the current cursor position to the jump list, so that user can
+        " jump back using the ' and ` marks.
+        mark '
         silent call search(a:tagpat, 'w')
     endif
 
@@ -2473,14 +2610,16 @@ function! s:Tlist_Show_Tag_Prototype()
         return
     endif
 
+    let lnum = line('.')
+
     " Get the file index
-    let fidx = s:Tlist_Get_File_Index_By_Linenum(line('.'))
+    let fidx = s:Tlist_Get_File_Index_By_Linenum(lnum)
     if fidx == -1
         return
     endif
 
     " Get the tag output line for the current tag
-    let tidx = s:Tlist_Get_Tag_Index(fidx)
+    let tidx = s:Tlist_Get_Tag_Index(fidx, lnum)
     if tidx == 0
         return
     endif
@@ -2561,7 +2700,8 @@ endfunction
 " Highlight the current tag
 " cntx == 1, Called by the taglist plugin itself
 " cntx == 2, Forced by the user through the TlistSync command
-function! s:Tlist_Highlight_Tag(filename, cur_lnum, cntx)
+" center = 1, move the tag line to the center of the taglist window
+function! s:Tlist_Highlight_Tag(filename, cur_lnum, cntx, center)
     " Highlight the current tag only if the user configured the
     " taglist plugin to do so or if the user explictly invoked the
     " command to highlight the current tag.
@@ -2664,10 +2804,15 @@ function! s:Tlist_Highlight_Tag(filename, cur_lnum, cntx)
         .foldopen
     endif
 
-    " Make sure the current tag line is visible in the taglist window.
-    " Calling the winline() function makes the line visible.  Don't know
-    " of a better way to achieve this.
-    call winline()
+    if a:center
+        " Move the tag line to the center of the taglist window
+        normal! z.
+    else
+        " Make sure the current tag line is visible in the taglist window.
+        " Calling the winline() function makes the line visible.  Don't know
+        " of a better way to achieve this.
+        call winline()
+    endif
 
     " Highlight the tag name
     call s:Tlist_Highlight_Tagline()
@@ -2972,7 +3117,7 @@ function! s:Tlist_Session_Load(...)
     let s:Tlist_Skip_Refresh = prev_Tlist_Skip_Refresh
 
     " Highlight the current tag
-    call s:Tlist_Highlight_Tag(fnamemodify(bufname('%'), ':p'), line('.'), 1)
+    call s:Tlist_Highlight_Tag(fnamemodify(bufname('%'), ':p'), line('.'), 1, 1)
 endfunction
 
 " Tlist_Session_Save
@@ -3000,6 +3145,9 @@ function! s:Tlist_Session_Save(...)
 
         echo "\n"
     endif
+
+    let old_verbose = &verbose
+    set verbose&vim
 
     exe 'redir! > ' . sessionfile
 
@@ -3058,6 +3206,8 @@ function! s:Tlist_Session_Save(...)
     endwhile
 
     redir END
+
+    let &verbose = old_verbose
 endfunction
 
 " Tlist_Update_File_Display
@@ -3065,7 +3215,8 @@ endfunction
 " action == 1, Close the fold for the file
 " action == 2, Remove the file from the taglist window
 function! s:Tlist_Update_File_Display(filename, action)
-    call s:Tlist_Log_Msg('Tlist_Update_File_Display (' . a:filename . ')')
+    call s:Tlist_Log_Msg('Tlist_Update_File_Display (' . a:filename .
+                \ ', action = ' . a:action . ')')
     " Make sure a valid filename is supplied
     if a:filename == ''
         return
@@ -3123,23 +3274,48 @@ function! s:Tlist_Update_File_Display(filename, action)
     endif
 endfunction
 
+" Tlist_Auto_Open_Check
+" Open the taglist window automatically on Vim startup.
+" Open the window only when files present in any of the Vim windows support
+" tags.
+function! s:Tlist_Check_Auto_Open ()
+    let open = 0
+
+    let i = 1
+    let buf_num = winbufnr(i)
+    while buf_num != -1
+        let filename = fnamemodify(bufname(buf_num), ':p')
+        if !s:Tlist_Skip_File(filename, getbufvar(buf_num, '&filetype'))
+            let open = 1
+            break
+        endif
+        let i = i + 1
+        let buf_num = winbufnr(i)
+    endwhile
+
+    if open
+        call s:Tlist_Toggle_Window()
+    endif
+endfunction
+
 " Define the taglist autocommand to automatically open the taglist window on
 " Vim startup
 if g:Tlist_Auto_Open
-    autocmd VimEnter * nested Tlist
+    autocmd VimEnter * nested call s:Tlist_Check_Auto_Open()
 endif
 
 " Refresh the taglist
 if g:Tlist_Process_File_Always
-    autocmd BufEnter * call <SID>Tlist_Refresh()
+    autocmd BufEnter * call s:Tlist_Refresh()
 endif
 
 " Define the user commands to manage the taglist window
 command! -nargs=0 Tlist call s:Tlist_Toggle_Window()
+command! -nargs=+ -complete=file TlistAddFiles call s:Tlist_Add_Files(<f-args>)
 command! -nargs=0 TlistClose call s:Tlist_Close_Window()
 command! -nargs=0 TlistUpdate call s:Tlist_Update_Tags()
 command! -nargs=0 TlistSync call s:Tlist_Highlight_Tag(
-                            \ fnamemodify(bufname('%'), ':p'), line('.'), 2)
+                            \ fnamemodify(bufname('%'), ':p'), line('.'), 2, 1)
 command! -nargs=* -complete=buffer TlistShowPrototype
             \ echo Tlist_Get_Tag_Prototype_By_Line(<f-args>)
 command! -nargs=* -complete=buffer TlistShowTag
@@ -3233,19 +3409,6 @@ function! s:Tlist_Menu_Get_Tag_Type_Cmd(fidx, ftype, ttype_idx)
 
                 let tname = s:tlist_{a:fidx}_{tidx}_tag_name
 
-                " If there is more than one tag with the same name, then
-                " add a count to the end of the menu name. Otherwise only
-                " one menu entry will be added for multiple tags with the
-                " same name (overloaded functions).
-                "let var_name = ttype . '_' .
-                "                \ substitute(tname, '\W', '__tagname__', 'g')
-                "if exists(var_name)
-                "    let {var_name} = {var_name} + 1
-                "    let tname = tname . '\ (' . {var_name} . ')'
-                "else
-                "    let {var_name} = 1
-                "endif
-
                 let mcmd = mcmd . m_prefix . '\&' .
                             \ s:menu_char_prefix[m_prefix_idx] . '\.' .
                             \ tname . ' :call <SID>Tlist_Menu_Jump_To_Tag(' .
@@ -3265,19 +3428,6 @@ function! s:Tlist_Menu_Get_Tag_Type_Cmd(fidx, ftype, ttype_idx)
             let tidx = s:tlist_{fidx_ttype}_{j}
 
             let tname = s:tlist_{a:fidx}_{tidx}_tag_name
-
-            " If there is more than one tag with the same name, then
-            " add a count to the end of the menu name. Otherwise only
-            " one menu entry will be added for multiple tags with the
-            " same name (overloaded functions).
-            "let var_name = ttype . '_' .
-            "                \ substitute(tname, '\W', '__tagname__', 'g')
-            "if exists(var_name)
-            "    let {var_name} = {var_name} + 1
-            "    let tname = tname . '\ (' . {var_name} . ')'
-            "else
-            "    let {var_name} = 1
-            "endif
 
             let mcmd = mcmd . m_prefix . '\&' .
                         \ s:menu_char_prefix[m_prefix_idx] . '\.' .
@@ -3447,6 +3597,10 @@ function! s:Tlist_Menu_Jump_To_Tag(tidx)
         return
     endif
 
+    " Add the current cursor position to the jump list, so that user can
+    " jump back using the ' and ` marks.
+    mark '
+
     silent call search(tagpat, 'w')
 
     " Bring the line to the middle of the window
@@ -3468,7 +3622,7 @@ function! s:Tlist_Menu_Init()
         autocmd!
 
         if !g:Tlist_Process_File_Always
-            autocmd BufEnter * call <SID>Tlist_Refresh()
+            autocmd BufEnter * call s:Tlist_Refresh()
         endif
         autocmd BufLeave * call s:Tlist_Menu_Remove_File()
     augroup end
@@ -3477,7 +3631,7 @@ function! s:Tlist_Menu_Init()
 endfunction
 
 if g:Tlist_Show_Menu
-    autocmd GUIEnter * call <SID>Tlist_Menu_Init()
+    autocmd GUIEnter * call s:Tlist_Menu_Init()
 endif
 
 " Tlist_Set_App
