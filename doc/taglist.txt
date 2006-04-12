@@ -2,14 +2,14 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2005 December 28
+Last change: 2006 April 12
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
 3. Requirements					|taglist-requirements|
 4. Installation 				|taglist-install|
 5. Usage 					|taglist-using|
-6. Configuration 				|taglist-configure|
+6. Options 					|taglist-options|
 7. Commands 					|taglist-commands|
 8. Global functions 				|taglist-functions|
 9. Extending 					|taglist-extend|
@@ -143,7 +143,9 @@ Opening the taglist window~
 You can open the taglist window using the ":TlistOpen" or the ":TlistToggle"
 commands. The ":TlistOpen" command opens the taglist window and jumps to it.
 The ":TlistToggle" command opens or closes (toggle) the taglist window and the
-cursor remains in the current window.
+cursor remains in the current window. If the 'Tlist_GainFocus_On_ToggleOpen'
+variable is set to 1, then the ":TlistToggle" command opens the taglist window
+and moves the cursor to the taglist window.
 
 You can map a key to invoke these commands. For example, the following command
 creates a normal mode mapping for the <F8> key to toggle the taglist window.
@@ -181,7 +183,8 @@ name using the mouse.
 
 In the taglist window, you can use the [[ or <Backspace> key to jump to the
 beginning of the previous file. You can use the ]] or <Tab> key to jump to the
-beginning of the next file.
+beginning of the next file. When you reach the first or last file, the search
+wraps around and the jumps to the next/previous file.
 
 Highlighting the current tag~
 The taglist plugin automatically highlights the name of the current tag in the
@@ -235,6 +238,11 @@ This command takes two arguments. The first argument specifies the directory
 from which to recursively add the files. The second optional argument
 specifies the wildcard matching pattern for selecting the files to add. The
 default pattern is * and all the files are added.
+
+Displaying tags for only one file~
+The taglist window displays the tags for all the files in the Vim buffer list
+and all the manually added files. To display the tags for only the current
+active buffer, set the 'Tlist_Show_One_File' variable to 1.
 
 Removing files from the taglist~
 You can remove a file from the taglist window, by pressing the 'd' key when the
@@ -312,22 +320,19 @@ prototype of the current tag.  For example,
 	:TlistShowPrototype myfile.c 50
 <
 Taglist window contents~
-The taglist window displays the tags for all the files in the Vim buffer list
-and all the manually added files. To display the tags for only the current
-active buffer, set the 'Tlist_Show_One_File' variable to 1.
-
 The tag names are grouped by their type (variable, function, class, etc.). For
 tags with scope information (like class members, structures inside structures,
 etc.), the scope information is displayed in square brackets "[]" after the tag
 name.
 
 The contents of the taglist buffer/window are managed by the taglist plugin.
-The Vim |'modifiable'| option is turned off for the taglist buffer. You should
-not manually edit the taglist buffer, by setting the |'modifiable'| flag. If
-you manually edit the taglist buffer contents, then the taglist plugin will be
-out of sync with the taglist buffer contents and the plugin will no longer
-work correctly. To redisplay the taglist buffer contents again, close the
-taglist window and reopen it.
+The |'filetype'| for the taglist buffer is set to 'taglist'.  The Vim
+|'modifiable'| option is turned off for the taglist buffer. You should not
+manually edit the taglist buffer, by setting the |'modifiable'| flag. If you
+manually edit the taglist buffer contents, then the taglist plugin will be out
+of sync with the taglist buffer contents and the plugin will no longer work
+correctly. To redisplay the taglist buffer contents again, close the taglist
+window and reopen it.
 
 Opening and closing the tag and file tree~
 In the taglist window, the tag names are displayed as a foldable tree using
@@ -483,7 +488,7 @@ in the taglist window.
   ]]		Jump to the beginning of the next file
   <Tab>		Jump to the beginning of the next file
   q             Close the taglist window
-  ?             Display help
+  <F1>          Display help
 
 The above keys will work in both the normal mode and the insert mode.
 
@@ -537,8 +542,8 @@ If you have installed the taglist help file (this file), then you can use the
 Vim ":help taglist-<keyword>" command to get help on the various taglist
 topics.
 
-You can press the "?" key in the taglist window to display the help
-information about using the taglist window. If you again press the '?' key,
+You can press the <F1> key in the taglist window to display the help
+information about using the taglist window. If you again press the <F1> key,
 the help information is removed from the taglist window.
 
 						*taglist-debug*
@@ -554,8 +559,8 @@ variable. In the later case, to minimize memory usage, only the last 3000
 characters from the debug messages are stored.
 
 ==============================================================================
-						*taglist-configure*
-6. Configuration~
+						*taglist-options*
+6. Options~
 
 A number of Vim variables control the behavior of the taglist plugin. These
 variables are initialized to a default value. By changing these variables you
@@ -584,6 +589,8 @@ description of these variables refer to the text below this table.
 				window.
 |'Tlist_Exit_OnlyWindow'|	Close Vim if the taglist is the only window.
 |'Tlist_File_Fold_Auto_Close'|	Close tag folds for inactive buffers.
+|'Tlist_GainFocus_On_ToggleOpen'|
+				Jump to taglist window on open.
 |'Tlist_Highlight_Tag_On_BufEnter'|
 				On entering a buffer, automatically highlight
 				the current tag.
@@ -725,6 +732,16 @@ in the taglist window will be collapsed/folded. When a buffer is loaded in a
 Vim window, the corresponding tags tree will be opened.
 >
 	let Tlist_File_Fold_Auto_Close = 1
+<
+					    *'Tlist_GainFocus_On_ToggleOpen'*
+Tlist_GainFocus_On_ToggleOpen~
+When the taglist window is opened using the ':TlistToggle' command, this
+option controls whether the cursor is moved to the taglist window or remains
+in the current window. By default, this option is set to 0 and the cursor
+remains in the current window. When this variable is set to 1, the cursor
+moves to the taglist window after opening the taglist window.
+>
+	let Tlist_GainFocus_On_ToggleOpen = 1
 <
 					    *'Tlist_Highlight_Tag_On_BufEnter'*
 Tlist_Highlight_Tag_On_BufEnter~
