@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.0 Beta 4
-" Last Modified: April 12, 2006
+" Version: 4.0
+" Last Modified: September 6, 2006
 "
 " The "Tag List" plugin is a source code browser plugin for Vim and provides
 " an overview of the structure of the programming language files and allows
@@ -252,20 +252,20 @@ if !exists('loaded_taglist')
     autocmd BufFilePost __Tag_List__ call s:Tlist_Vim_Session_Load()
 
     " Define the user commands to manage the taglist window
-    command! -nargs=0 TlistToggle call s:Tlist_Window_Toggle()
-    command! -nargs=0 TlistOpen call s:Tlist_Window_Open()
+    command! -nargs=0 -bar TlistToggle call s:Tlist_Window_Toggle()
+    command! -nargs=0 -bar TlistOpen call s:Tlist_Window_Open()
     " For backwards compatiblity define the Tlist command
-    command! -nargs=0 Tlist TlistToggle
+    command! -nargs=0 -bar Tlist TlistToggle
     command! -nargs=+ -complete=file TlistAddFiles
                 \  call s:Tlist_Add_Files(<f-args>)
     command! -nargs=+ -complete=dir TlistAddFilesRecursive
                 \ call s:Tlist_Add_Files_Recursive(<f-args>)
-    command! -nargs=0 TlistClose call s:Tlist_Window_Close()
-    command! -nargs=0 TlistUpdate call s:Tlist_Update_Current_File()
-    command! -nargs=0 TlistHighlightTag call s:Tlist_Window_Highlight_Tag(
+    command! -nargs=0 -bar TlistClose call s:Tlist_Window_Close()
+    command! -nargs=0 -bar TlistUpdate call s:Tlist_Update_Current_File()
+    command! -nargs=0 -bar TlistHighlightTag call s:Tlist_Window_Highlight_Tag(
                         \ fnamemodify(bufname('%'), ':p'), line('.'), 2, 1)
     " For backwards compatiblity define the TlistSync command
-    command! -nargs=0 TlistSync TlistHighlightTag
+    command! -nargs=0 -bar TlistSync TlistHighlightTag
     command! -nargs=* -complete=buffer TlistShowPrototype
                 \ echo Tlist_Get_Tag_Prototype_By_Line(<f-args>)
     command! -nargs=* -complete=buffer TlistShowTag
@@ -274,14 +274,14 @@ if !exists('loaded_taglist')
                 \ call s:Tlist_Session_Load(<q-args>)
     command! -nargs=* -complete=file TlistSessionSave
                 \ call s:Tlist_Session_Save(<q-args>)
-    command! TlistLock let Tlist_Auto_Update=0
-    command! TlistUnlock let Tlist_Auto_Update=1
+    command! TlistLock -bar let Tlist_Auto_Update=0
+    command! TlistUnlock -bar let Tlist_Auto_Update=1
 
     " Commands for enabling/disabling debug and to display debug messages
-    command! -nargs=? -complete=file TlistDebug
+    command! -nargs=? -complete=file -bar TlistDebug
                 \ call s:Tlist_Debug_Enable(<q-args>)
-    command! -nargs=0 TlistUndebug  call s:Tlist_Debug_Disable()
-    command! -nargs=0 TlistMessages echo s:tlist_msg
+    command! -nargs=0 -bar TlistUndebug  call s:Tlist_Debug_Disable()
+    command! -nargs=0 -bar TlistMessages echo s:tlist_msg
 
     " Define autocommands to autoload the taglist plugin when needed.
 
@@ -468,7 +468,7 @@ let s:tlist_def_yacc_settings = 'yacc;l:label'
 "------------------- end of language specific options --------------------
 
 " Vim window size is changed by the taglist plugin or not
-let s:tlist_winsize_chgd = 0
+let s:tlist_winsize_chgd = -1
 " Taglist window is maximized or not
 let s:tlist_win_maximized = 0
 " Name of files in the taglist
@@ -1244,20 +1244,22 @@ function! s:Tlist_Window_Create()
         " Horizontal window height
         let win_size = g:Tlist_WinHeight
     else
-        " Open a vertically split window. Increase the window size, if
-        " needed, to accomodate the new window
-        if g:Tlist_Inc_Winwidth &&
-                    \ &columns < (80 + g:Tlist_WinWidth)
-            " Save the original window position
-            let s:tlist_pre_winx = getwinposx()
-            let s:tlist_pre_winy = getwinposy()
+        if s:tlist_winsize_chgd == -1
+            " Open a vertically split window. Increase the window size, if
+            " needed, to accomodate the new window
+            if g:Tlist_Inc_Winwidth &&
+                        \ &columns < (80 + g:Tlist_WinWidth)
+                " Save the original window position
+                let s:tlist_pre_winx = getwinposx()
+                let s:tlist_pre_winy = getwinposy()
 
-            " one extra column is needed to include the vertical split
-            let &columns= &columns + g:Tlist_WinWidth + 1
+                " one extra column is needed to include the vertical split
+                let &columns= &columns + g:Tlist_WinWidth + 1
 
-            let s:tlist_winsize_chgd = 1
-        else
-            let s:tlist_winsize_chgd = 0
+                let s:tlist_winsize_chgd = 1
+            else
+                let s:tlist_winsize_chgd = 0
+            endif
         endif
 
         if g:Tlist_Use_Right_Window
@@ -1315,6 +1317,26 @@ function! s:Tlist_Window_Zoom()
     endif
 endfunction
 
+" Tlist_Ballon_Expr
+" When the mouse cursor is over a tag in the taglist window, display the
+" tag prototype (balloon)
+function! Tlist_Ballon_Expr()
+    " Get the file index
+    let fidx = s:Tlist_Window_Get_File_Index_By_Linenum(v:beval_lnum)
+    if fidx == -1
+        return ''
+    endif
+
+    " Get the tag output line for the current tag
+    let tidx = s:Tlist_Window_Get_Tag_Index(fidx, v:beval_lnum)
+    if tidx == 0
+        return ''
+    endif
+
+    " Get the tag search pattern and display it
+    return s:Tlist_Get_Tag_Prototype(fidx, tidx)
+endfunction
+
 " Tlist_Window_Check_Width
 " Check the width of the taglist window. For horizontally split windows, the
 " 'winfixheight' option is used to fix the height of the window. For
@@ -1338,6 +1360,32 @@ function! s:Tlist_Window_Check_Width()
         if save_winnr != tlist_winnr
             call s:Tlist_Exe_Cmd_No_Acmds('wincmd p')
         endif
+    endif
+endfunction
+
+" Tlist_Window_Exit_Only_Window
+" If the 'Tlist_Exit_OnlyWindow' option is set, then exit Vim if only the
+" taglist window is present.
+function! s:Tlist_Window_Exit_Only_Window()
+    " Before quitting Vim, delete the taglist buffer so that
+    " the '0 mark is correctly set to the previous buffer.
+    if v:version < 700
+	if winbufnr(2) == -1
+	    bdelete
+	    quit
+	endif
+    else
+	if winbufnr(2) == -1
+	    if tabpagenr('$') == 1
+		" Only one tag page is present
+		bdelete
+		quit
+	    else
+		" More than one tab page is present. Close only the current
+		" tab page
+		close
+	    endif
+	endif
     endif
 endfunction
 
@@ -1439,6 +1487,12 @@ function! s:Tlist_Window_Init()
         set winfixwidth
     endif
 
+    " Setup balloon evaluation to display tag prototype
+    if v:version >= 700 && has('balloon_eval')
+        setlocal balloonexpr=Tlist_Ballon_Expr()
+        set ballooneval
+    endif
+
     " Setup the cpoptions properly for the maps to work
     let old_cpoptions = &cpoptions
     set cpoptions&vim
@@ -1531,17 +1585,15 @@ function! s:Tlist_Window_Init()
 
         " Adjust the Vim window width when taglist window is closed
         autocmd BufUnload __Tag_List__ call s:Tlist_Post_Close_Cleanup()
-        " Close the fold for this buffer when it's not visible in any window
+        " Close the fold for this buffer when leaving the buffer
         if g:Tlist_File_Fold_Auto_Close
-            autocmd BufWinLeave * silent
+            autocmd BufWinLeave,BufLeave * silent
                 \ call s:Tlist_Window_Close_File_Fold(expand('<afile>:p'))
         endif
         " Exit Vim itself if only the taglist window is present (optional)
         if g:Tlist_Exit_OnlyWindow
-            " Before quitting Vim, delete the taglist buffer so that
-            " the '0 mark is correctly set to the previous buffer.
-            autocmd BufEnter __Tag_List__ nested if winbufnr(2) == -1 | 
-                        \ bdelete | quit | endif
+	    autocmd BufEnter __Tag_List__ nested
+			\ call s:Tlist_Window_Exit_Only_Window()
         endif
         if s:tlist_app_name != "winmanager" &&
                     \ !g:Tlist_Process_File_Always &&
@@ -1670,7 +1722,7 @@ function! s:Tlist_Post_Close_Cleanup()
 
     if s:tlist_app_name != "winmanager"
     if g:Tlist_Use_Horiz_Window || g:Tlist_Inc_Winwidth == 0 ||
-                \ s:tlist_winsize_chgd == 0 ||
+                \ s:tlist_winsize_chgd != 1 ||
                 \ &columns < (80 + g:Tlist_WinWidth)
         " No need to adjust window width if using horizontally split taglist
         " window or if columns is less than 101 or if the user chose not to
@@ -1688,6 +1740,8 @@ function! s:Tlist_Post_Close_Cleanup()
         let &columns= &columns - (g:Tlist_WinWidth + 1)
     endif
     endif
+
+    let s:tlist_winsize_chgd = -1
 
     " Reset taglist state variables
     if s:tlist_app_name == "winmanager"
@@ -3006,6 +3060,15 @@ function! s:Tlist_Window_Open_File(win_ctrl, filename, tagpat)
         " Mark the window, so that it can be reused.
         let w:tlist_file_window = "yes"
     else
+        if v:version >= 700
+            " If the file is opened in more than one window, then check
+            " whether the last accessed window has the selected file.
+            " If it does, then use that window.
+            let lastwin_bufnum = winbufnr(winnr('#'))
+            if bufnr(a:filename) == lastwin_bufnum
+                let winnum = winnr('#')
+            endif
+        endif
         exe winnum . 'wincmd w'
 
         " If the user asked to jump to the tag in a new window, then split the
@@ -3824,21 +3887,21 @@ endfunction
 " Open the window only when files present in any of the Vim windows support
 " tags.
 function! s:Tlist_Window_Check_Auto_Open()
-    let open = 0
+    let open_window = 0
 
     let i = 1
     let buf_num = winbufnr(i)
     while buf_num != -1
         let filename = fnamemodify(bufname(buf_num), ':p')
         if !s:Tlist_Skip_File(filename, getbufvar(buf_num, '&filetype'))
-            let open = 1
+            let open_window = 1
             break
         endif
         let i = i + 1
         let buf_num = winbufnr(i)
     endwhile
 
-    if open
+    if open_window
         call s:Tlist_Window_Toggle()
     endif
 endfunction

@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2006 April 12
+Last change: 2006 September 6
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -82,16 +82,16 @@ systems).
 The taglist plugin will work with Vim version 6.0 and above.
 
 The taglist plugin relies on the exuberant ctags utility to dynamically
-generate the tag listing. You can download the exuberant ctags utility from
+generate the tag listing.  The exuberant ctags utility must be installed in
+your system to use this plugin. You should use exuberant ctags version 5.0 and
+above. The exuberant ctags utility is shipped with most of the Linux
+distributions.  You can download the exuberant ctags utility from
 >
 	http://ctags.sourceforge.net
 <
-The exuberant ctags utility must be installed in your system to use this
-plugin. You should use exuberant ctags version 5.0 and above. This plugin
-doesn't use or create a tags file and there is no need to create a tags file
-to use this plugin. The taglist plugin will not work with the GNU ctags or the
-Unix ctags utility. The exuberant ctags utility is shipped with most of the
-Linux distributions.
+The taglist plugin doesn't use or create a tags file and there is no need to
+create a tags file to use this plugin. The taglist plugin will not work with
+the GNU ctags or the Unix ctags utility.
 
 This plugin relies on the Vim "filetype" detection mechanism to determine the
 type of the current file. You have to turn on the Vim filetype detection by
@@ -124,9 +124,10 @@ Vim without the system() function for security reasons.
    directory, start Vim and run the ":helptags ." command to process the
    taglist help file. Without this step, you cannot jump to the taglist help
    topics.
-3. If the exuberant ctags utility is not present in your PATH, then set the
-   'Tlist_Ctags_Cmd' variable to point to the location of the exuberant ctags
-   utility (not to the directory) in the .vimrc file.
+3. If the exuberant ctags utility is not present in one of the directories in
+   the PATH environment variable, then set the 'Tlist_Ctags_Cmd' variable to
+   point to the location of the exuberant ctags utility (not to the directory)
+   in the .vimrc file.
 4. If you are running a terminal/console version of Vim and the terminal
    doesn't support changing the window width then set the
    'Tlist_Inc_Winwidth' variable to 0 in the .vimrc file.
@@ -135,9 +136,45 @@ Vim without the system() function for security reasons.
    window. You can use the ":help taglist" command to get more information
    about using the taglist plugin.
 
+To uninstall the taglist plugin, remove the plugin/taglist.vim and
+doc/taglist.txt files.
+
 ==============================================================================
 						*taglist-using*
 5. Usage~
+
+The taglist plugin can be used in several different ways.
+
+1. You can open the taglist window and keep it open. On opening the taglist
+   window, the tags defined in all the files in the Vim buffer list will be
+   displayed in the taglist window. As you edit files, the tags defined in
+   them will be added to the taglist window. You can select a tag from the
+   taglist window and jump to it. The current tag will be highlighted in the
+   taglist window. You can close the taglist window when you no longer need
+   the window.
+2. You can configure the taglist plugin to process the tags defined in all the
+   edited files always. In this configuration, even if the taglist window is
+   closed and the taglist menu is not displayed, the taglist plugin will
+   processes the tags defined in newly edited files. You can then open the
+   taglist window only when you need to select a tag and then automatically
+   close the taglist window after selecting the tag.
+3. You can configure the taglist plugin to display only the tags defined in
+   the current file in the taglist window. By default, the taglist plugin
+   displays the tags defined in all the files in the Vim buffer list. As you
+   switch between files, the taglist window will be refreshed to display the
+   tags defined only in the current file.
+4. You can use the Tags pull-down and popup menu created by the taglist plugin
+   to display the tags defined in the current file and select a tag to jump to
+   it. You can use the menu without opening the taglist window. By default,
+   the Tags menu is disabled.
+5. You can configure the taglist plugin to display the name of the current tag
+   in the Vim window status line or in the Vim window title bar. For this to
+   work without the taglist window or menu, you need to configure the taglist
+   plugin to process the tags defined in a file always.
+6. You can save the tags defined in multiple files to a taglist session file
+   and load it when needed. You can also configure the taglist plugin to not
+   update the taglist window when editing new files. You can then manually add
+   files to the taglist window.
 
 Opening the taglist window~
 You can open the taglist window using the ":TlistOpen" or the ":TlistToggle"
@@ -319,6 +356,10 @@ prototype of the current tag.  For example,
 	:TlistShowPrototype
 	:TlistShowPrototype myfile.c 50
 <
+In the taglist window, when the mouse is moved over a tag name, the tag
+prototype is displayed in a balloon. This works only in GUI versions where
+balloon evaluation is supported.
+
 Taglist window contents~
 The tag names are grouped by their type (variable, function, class, etc.). For
 tags with scope information (like class members, structures inside structures,
@@ -726,10 +767,9 @@ Tlist_File_Fold_Auto_Close~
 By default, the tags tree displayed in the taglist window for all the files is
 opened. You can close/fold the tags tree for the files manually. To
 automatically close the tags tree for inactive files, you can set the
-Tlist_File_Fold_Auto_Close variable to 1. When this variable is set to 1, if a
-Vim buffer is no longer displayed in a Vim window, the corresponding tags tree
-in the taglist window will be collapsed/folded. When a buffer is loaded in a
-Vim window, the corresponding tags tree will be opened.
+Tlist_File_Fold_Auto_Close variable to 1. When this variable is set to 1, the
+tags tree for the current buffer is automatically opened and for all the
+buffers is closed.
 >
 	let Tlist_File_Fold_Auto_Close = 1
 <
