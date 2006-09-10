@@ -1,7 +1,15 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.0
-" Last Modified: September 6, 2006
+" Version: 4.1
+" Last Modified: September 10, 2006
+" Copyright: Copyright (C) 2002-2006 Yegappan Lakshmanan
+"            Permission is hereby granted to use and distribute this code,
+"            with or without modifications, provided that this copyright
+"            notice is copied with it. Like anything else that's free,
+"            taglist.vim is provided *as is* and comes with no warranty of any
+"            kind, either expressed or implied. In no event will the copyright
+"            holder be liable for any damamges resulting from the use of this
+"            software.
 "
 " The "Tag List" plugin is a source code browser plugin for Vim and provides
 " an overview of the structure of the programming language files and allows
@@ -274,8 +282,8 @@ if !exists('loaded_taglist')
                 \ call s:Tlist_Session_Load(<q-args>)
     command! -nargs=* -complete=file TlistSessionSave
                 \ call s:Tlist_Session_Save(<q-args>)
-    command! TlistLock -bar let Tlist_Auto_Update=0
-    command! TlistUnlock -bar let Tlist_Auto_Update=1
+    command! -bar TlistLock let Tlist_Auto_Update=0
+    command! -bar TlistUnlock let Tlist_Auto_Update=1
 
     " Commands for enabling/disabling debug and to display debug messages
     command! -nargs=? -complete=file -bar TlistDebug
@@ -649,7 +657,7 @@ let s:tlist_file_name_idx_cache = -1
 " Tlist_Get_File_Index()
 " Return the index of the specified filename
 function! s:Tlist_Get_File_Index(fname)
-    if s:tlist_file_count == 0
+    if s:tlist_file_count == 0 || a:fname == ''
         return -1
     endif
 
@@ -1587,8 +1595,8 @@ function! s:Tlist_Window_Init()
         autocmd BufUnload __Tag_List__ call s:Tlist_Post_Close_Cleanup()
         " Close the fold for this buffer when leaving the buffer
         if g:Tlist_File_Fold_Auto_Close
-            autocmd BufWinLeave,BufLeave * silent
-                \ call s:Tlist_Window_Close_File_Fold(expand('<afile>:p'))
+            autocmd BufEnter * silent
+                \ call s:Tlist_Window_Open_File_Fold(expand('<afile>:p'))
         endif
         " Exit Vim itself if only the taglist window is present (optional)
         if g:Tlist_Exit_OnlyWindow
@@ -2252,7 +2260,7 @@ function! s:Tlist_Process_File(filename, ftype)
             let ttype = s:Tlist_Extract_Tagtype(one_line)
 
             " Make sure the tag type is a valid and supported one
-            if ttype == '' || stridx(s:ctags_flags, ttype) == -1
+            if ttype == '' || stridx(ctags_flags, ttype) == -1
                 " Line is not in proper tags format or Tag type is not
                 " supported
                 continue
@@ -3829,26 +3837,16 @@ endfunction
 " When a buffer is deleted, remove the file from the taglist
 autocmd BufDelete * silent call s:Tlist_Buffer_Removed(expand('<afile>:p'))
 
-" Tlist_Window_Close_File_Fold
-" Close the fold for the specified file
-function! s:Tlist_Window_Close_File_Fold(filename)
-    call s:Tlist_Log_Msg('Tlist_Window_Close_File_Fold (' . a:filename . ')')
-    " Make sure a valid filename is supplied
-    if a:filename == ''
-        return
-    endif
+" Tlist_Window_Open_File_Fold
+" Open the fold for the specified file and close the fold for all the
+" other files
+function! s:Tlist_Window_Open_File_Fold(filename)
+    call s:Tlist_Log_Msg('Tlist_Window_Open_File_Fold (' . a:filename . ')')
 
     " Make sure the taglist window is present
     let winnum = bufwinnr(g:TagList_title)
     if winnum == -1
         call s:Tlist_Warning_Msg('Taglist: Error - Taglist window is not open')
-        return
-    endif
-
-    " Get tag list index of the specified file
-    let fidx = s:Tlist_Get_File_Index(a:filename)
-    if fidx == -1
-        " File not present in the taglist window
         return
     endif
 
@@ -3860,21 +3858,26 @@ function! s:Tlist_Window_Close_File_Fold(filename)
         let in_taglist_window = 0
     endif
 
+    if in_taglist_window
+        " When entering the taglist window, no need to update the folds
+        return
+    endif
+
     " Go to the taglist window
     if !in_taglist_window
         call s:Tlist_Exe_Cmd_No_Acmds(winnum . 'wincmd w')
     endif
 
-    " Save the cursor position
-    let save_lnum = line('.')
+    " Close all the folds
+    silent! %foldclose
 
-    " Perform the requested action on the file
-    " Close the fold for the file
-    exe "silent! " . s:tlist_{fidx}_start . "," .
-                \ s:tlist_{fidx}_end . "foldclose"
-
-    " Move the cursor to the original location
-    exe save_lnum
+    " Get tag list index of the specified file
+    let fidx = s:Tlist_Get_File_Index(a:filename)
+    if fidx != -1
+        " Open the fold for the file
+        exe "silent! " . s:tlist_{fidx}_start . "," .
+                    \ s:tlist_{fidx}_end . "foldopen"
+    endif
 
     " Go back to the original window
     if !in_taglist_window
