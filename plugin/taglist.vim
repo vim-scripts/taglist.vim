@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.1
-" Last Modified: September 10, 2006
+" Version: 4.2
+" Last Modified: November 14, 2006
 " Copyright: Copyright (C) 2002-2006 Yegappan Lakshmanan
 "            Permission is hereby granted to use and distribute this code,
 "            with or without modifications, provided that this copyright
@@ -17,7 +17,7 @@
 " programming languages.  You can visit the taglist plugin home page for more
 " information:
 "
-"       http://www.geocities.com/yegappan/taglist
+"       http://vim-taglist.sourceforge.net
 "
 " You can subscribe to the taglist mailing list to post your questions
 " or suggestions for improvement or to report bugs. Visit the following
@@ -81,7 +81,12 @@ if !exists('loaded_taglist')
     " Location of the exuberant ctags tool
     if !exists('Tlist_Ctags_Cmd')
         if executable('exuberant-ctags')
+            " On Debian Linux, exuberant ctags is installed
+            " as exuberant-ctags
             let Tlist_Ctags_Cmd = 'exuberant-ctags'
+        elseif executable(' exctags')
+            " On Free-BSD, exuberant ctags is installed as exctags
+            let Tlist_Ctags_ Cmd = 'exctags'
         elseif executable('ctags')
             let Tlist_Ctags_Cmd = 'ctags'
         elseif executable('ctags.exe')
@@ -289,34 +294,45 @@ if !exists('loaded_taglist')
     command! -nargs=? -complete=file -bar TlistDebug
                 \ call s:Tlist_Debug_Enable(<q-args>)
     command! -nargs=0 -bar TlistUndebug  call s:Tlist_Debug_Disable()
-    command! -nargs=0 -bar TlistMessages echo s:tlist_msg
+    command! -nargs=0 -bar TlistMessages call s:Tlist_Debug_Show()
 
     " Define autocommands to autoload the taglist plugin when needed.
 
     " Trick to get the current script ID
     map <SID>xx <SID>xx
-    let s:sid = substitute(maparg('<SID>xx'), '<SNR>\(\d\+_\)xx$', '\1', '')
+    let s:tlist_sid = substitute(maparg('<SID>xx'), '<SNR>\(\d\+_\)xx$',
+                                \ '\1', '')
     unmap <SID>xx
 
-    exe 'autocmd FuncUndefined *' . s:sid . 'Tlist_* source ' .
+    exe 'autocmd FuncUndefined *' . s:tlist_sid . 'Tlist_* source ' .
                 \ escape(expand('<sfile>'), ' ')
-    exe 'autocmd FuncUndefined *' . s:sid . 'Tlist_Window_* source ' .
+    exe 'autocmd FuncUndefined *' . s:tlist_sid . 'Tlist_Window_* source ' .
                 \ escape(expand('<sfile>'), ' ')
-    exe 'autocmd FuncUndefined *' . s:sid . 'Tlist_Menu_* source ' .
+    exe 'autocmd FuncUndefined *' . s:tlist_sid . 'Tlist_Menu_* source ' .
                 \ escape(expand('<sfile>'), ' ')
     exe 'autocmd FuncUndefined Tlist_* source ' .
                 \ escape(expand('<sfile>'), ' ')
     exe 'autocmd FuncUndefined TagList_* source ' .
                 \ escape(expand('<sfile>'), ' ')
 
-    unlet! s:sid
-
     let loaded_taglist = 'fast_load_done'
+
+    if g:Tlist_Show_Menu && has('gui_running')
+        call s:Tlist_Menu_Init()
+    endif
 
     " restore 'cpo'
     let &cpo = s:cpo_save
     finish
 endif
+
+if !exists('s:tlist_sid')
+    " Two or more versions of taglist plugin are installed. Don't
+    " load this version of the plugin.
+    finish
+endif
+
+unlet! s:tlist_sid
 
 if loaded_taglist != 'fast_load_done'
     " restore 'cpo'
@@ -619,6 +635,29 @@ endfunction
 function! s:Tlist_Debug_Disable(...)
     let s:tlist_debug = 0
     let s:tlist_debug_file = ''
+endfunction
+
+" Tlist_Debug_Show
+" Display the taglist debug message in a new window
+function! s:Tlist_Debug_Show()
+    if s:tlist_debug == 0
+        call s:Tlist_Warning_Msg('Taglist: Debug is disabled')
+        return
+    endif
+
+    if s:tlist_msg == ''
+        call s:Tlist_Warning_Msg('Taglist: No debug messages')
+        return
+    endif
+
+    " Open a new window to display the taglist debug messages
+    new taglist_debug.txt
+    " Delete all the lines (if the buffer already exists)
+    silent! %delete _
+    " Add the messages
+    silent! put =s:tlist_msg
+    " Move the cursor to the first line
+    normal! gg
 endfunction
 
 " Tlist_Log_Msg
@@ -1402,6 +1441,12 @@ endfunction
 function! s:Tlist_Window_Init()
     call s:Tlist_Log_Msg('Tlist_Window_Init()')
 
+    " The 'readonly' option should not be set for the taglist buffer.
+    " If Vim is started as "view/gview" or if the ":view" command is
+    " used, then the 'readonly' option is set for all the buffers.
+    " Unset it for the taglist buffer
+    setlocal noreadonly
+
     " Set the taglist buffer filetype to taglist
     setlocal filetype=taglist
 
@@ -1510,7 +1555,8 @@ function! s:Tlist_Window_Init()
     nnoremap <buffer> <silent> o :call <SID>Tlist_Window_Jump_To_Tag(1)<CR>
     nnoremap <buffer> <silent> p :call <SID>Tlist_Window_Jump_To_Tag(2)<CR>
     nnoremap <buffer> <silent> <2-LeftMouse> :call <SID>Tlist_Window_Jump_To_Tag(0)<CR>
-    nnoremap <buffer> <silent> s :call <SID>Tlist_Change_Sort(1, 1, '')<CR>
+    nnoremap <buffer> <silent> s
+                \ :call <SID>Tlist_Change_Sort('cmd', 'toggle', '')<CR>
     nnoremap <buffer> <silent> + :silent! foldopen<CR>
     nnoremap <buffer> <silent> - :silent! foldclose<CR>
     nnoremap <buffer> <silent> * :silent! %foldopen!<CR>
@@ -1538,7 +1584,7 @@ function! s:Tlist_Window_Init()
     inoremap <buffer> <silent> <2-LeftMouse> <C-o>:call
                                             \ <SID>Tlist_Window_Jump_To_Tag(0)<CR>
     inoremap <buffer> <silent> s
-                            \ <C-o>:call <SID>Tlist_Change_Sort(1, 1, '')<CR>
+                \ <C-o>:call <SID>Tlist_Change_Sort('cmd', 'toggle', '')<CR>
     inoremap <buffer> <silent> +             <C-o>:silent! foldopen<CR>
     inoremap <buffer> <silent> -             <C-o>:silent! foldclose<CR>
     inoremap <buffer> <silent> *             <C-o>:silent! %foldopen!<CR>
@@ -1898,17 +1944,17 @@ function! s:Tlist_Window_Refresh_File(filename, ftype)
     endwhile
 
     if s:tlist_{fidx}_tag_count == 0
-        put =''
+        if g:Tlist_Compact_Format == 0
+            silent! put =''
+        endif
     endif
 
     let s:tlist_{fidx}_end = line('.') - 1
 
     " Create a fold for the entire file
     exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'fold'
-    if !g:Tlist_File_Fold_Auto_Close
-        exe 'silent! ' . s:tlist_{fidx}_start . ',' .
-                    \ s:tlist_{fidx}_end . 'foldopen!'
-    endif
+    exe 'silent! ' . s:tlist_{fidx}_start . ',' .
+                \ s:tlist_{fidx}_end . 'foldopen!'
 
     " Goto the starting line for this file,
     exe s:tlist_{fidx}_start
@@ -2178,12 +2224,38 @@ function! s:Tlist_Process_File(filename, ftype)
     let ctags_cmd = g:Tlist_Ctags_Cmd . ctags_args
     let ctags_cmd = ctags_cmd . ' "' . a:filename . '"'
 
+    if &shellxquote == '"'
+        " Double-quotes within double-quotes will not work in the
+        " command-line.If the 'shellxquote' option is set to double-quotes,
+        " then escape the double-quotes in the ctags command-line.
+        let ctags_cmd = escape(ctags_cmd, '"')
+    endif
+
     " In Windows 95, if not using cygwin, disable the 'shellslash'
     " option. Otherwise, this will cause problems when running the
     " ctags command.
     if has('win95') && !has('win32unix')
         let old_shellslash = &shellslash
         set noshellslash
+    endif
+
+    if has('win32') && !has('win32unix') && !has('win95')
+                \ && (&shell =~ 'cmd.exe')
+        " Windows does not correctly deal with commands that have more than 1
+        " set of double quotes.  It will strip them all resulting in:
+        " 'C:\Program' is not recognized as an internal or external command
+        " operable program or batch file.  To work around this, place the
+        " command inside a batch file and call the batch file.
+        " Do this only on Win2K, WinXP and above.
+        " Contributed by: David Fishburn.
+        let s:taglist_tempfile = fnamemodify(tempname(), ':h') .
+                    \ '\taglist.cmd'
+        exe 'redir! > ' . s:taglist_tempfile
+        silent echo ctags_cmd
+        redir END
+
+        call s:Tlist_Log_Msg('Cmd inside batch file: ' . ctags_cmd)
+        let ctags_cmd = '"' . s:taglist_tempfile . '"'
     endif
 
     call s:Tlist_Log_Msg('Cmd: ' . ctags_cmd)
@@ -2196,6 +2268,11 @@ function! s:Tlist_Process_File(filename, ftype)
         let &shellslash = old_shellslash
     endif
 
+    if exists('s:taglist_tempfile')
+        " Delete the temporary cmd file created on MS-Windows
+        call delete(s:taglist_tempfile)
+    endif
+
     " Handle errors
     if v:shell_error
         let msg = "Taglist: Failed to generate tags for " . a:filename
@@ -2206,6 +2283,9 @@ function! s:Tlist_Process_File(filename, ftype)
         return fidx
     endif
 
+    " Store the modification time for the file
+    let s:tlist_{fidx}_mtime = getftime(a:filename)
+
     " No tags for current file
     if cmd_output == ''
         call s:Tlist_Log_Msg('No tags defined in ' . a:filename)
@@ -2213,9 +2293,6 @@ function! s:Tlist_Process_File(filename, ftype)
     endif
 
     call s:Tlist_Log_Msg('Generated tags information for ' . a:filename)
-
-    " Store the modification time for the file
-    let s:tlist_{fidx}_mtime = getftime(a:filename)
 
     if v:version > 601
         " The following script local variables are used by the
@@ -2436,6 +2513,16 @@ function! s:Tlist_Window_Close()
     endif
 endfunction
 
+" Tlist_Window_Mark_File_Window
+" Mark the current window as the file window to use when jumping to a tag.
+" Only if the current window is a non-plugin, non-preview and non-taglist
+" window
+function! s:Tlist_Window_Mark_File_Window()
+    if getbufvar('%', '&buftype') == '' && !&previewwindow
+        let w:tlist_file_window = "yes"
+    endif
+endfunction
+
 " Tlist_Window_Open
 " Open and refresh the taglist window
 function! s:Tlist_Window_Open()
@@ -2460,9 +2547,9 @@ function! s:Tlist_Window_Open()
     let curbuf_ftype = getbufvar('%', '&filetype')
     let cur_lnum = line('.')
 
-    " Mark the current window as the desired window to open a file
-    " when a tag is selected
-    let w:tlist_file_window = "yes"
+    " Mark the current window as the desired window to open a file when a tag
+    " is selected.
+    call s:Tlist_Window_Mark_File_Window()
 
     " Open the taglist window
     call s:Tlist_Window_Create()
@@ -2816,14 +2903,14 @@ endfunction
 
 " Tlist_Change_Sort()
 " Change the sort order of the tag listing
-" caller == 1, taglist window
-" caller == 2, taglist menu
-" action == 1, toggle sort from name to order and vice versa
-" action == 2, set the sort order to sort_type
+" caller == 'cmd', command used in the taglist window
+" caller == 'menu', taglist menu
+" action == 'toggle', toggle sort from name to order and vice versa
+" action == 'set', set the sort order to sort_type
 function! s:Tlist_Change_Sort(caller, action, sort_type)
     call s:Tlist_Log_Msg('Tlist_Change_Sort (caller = ' . a:caller .
             \ ', action = ' . a:action . ', sort_type = ' . a:sort_type . ')')
-    if a:caller == 1
+    if a:caller == 'cmd'
         let fidx = s:Tlist_Window_Get_File_Index_By_Linenum(line('.'))
         if fidx == -1
             return
@@ -2831,14 +2918,14 @@ function! s:Tlist_Change_Sort(caller, action, sort_type)
 
         " Remove the previous highlighting
         match none
-    elseif a:caller == 2
+    elseif a:caller == 'menu'
         let fidx = s:Tlist_Get_File_Index(fnamemodify(bufname('%'), ':p'))
         if fidx == -1
             return
         endif
     endif
 
-    if a:action == 1
+    if a:action == 'toggle'
         let sort_type = s:tlist_{fidx}_sort_type
 
         " Toggle the sort order from 'name' to 'order' and vice versa
@@ -2854,12 +2941,14 @@ function! s:Tlist_Change_Sort(caller, action, sort_type)
     " Invalidate the tags listed for this file
     let s:tlist_{fidx}_valid = 0
 
-    if a:caller  == 1
+    if a:caller  == 'cmd'
         " Save the current line for later restoration
         let curline = '\V\^' . getline('.') . '\$'
 
         call s:Tlist_Window_Refresh_File(s:tlist_{fidx}_filename,
                     \   s:tlist_{fidx}_filetype)
+
+        exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'foldopen!'
 
         " Go back to the cursor line before the tag list is sorted
         call search(curline, 'w')
@@ -2911,6 +3000,8 @@ function! s:Tlist_Window_Update_File()
     " Update the taglist window
     call s:Tlist_Window_Refresh_File(s:tlist_{fidx}_filename,
                 \ s:tlist_{fidx}_filetype)
+
+    exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'foldopen!'
 
     " Go back to the tag line before the list is updated
     call search(curline, 'w')
@@ -3008,9 +3099,10 @@ function! s:Tlist_Window_Open_File(win_ctrl, filename, tagpat)
                 let fwin_num = i
                 break
             endif
-            if first_usable_win == 0 && bufname(bnum) != g:TagList_title &&
-                        \ getbufvar(bnum, '&buftype') == ''
-                " First non-taglist and a non-plugin window
+            if first_usable_win == 0 &&
+                        \ getbufvar(bnum, '&buftype') == '' &&
+                        \ !getwinvar(i, '&previewwindow')
+                " First non-taglist, non-plugin and non-preview window
                 let first_usable_win = i
             endif
             let i = i + 1
@@ -3066,7 +3158,7 @@ function! s:Tlist_Window_Open_File(win_ctrl, filename, tagpat)
             endif
         endif
         " Mark the window, so that it can be reused.
-        let w:tlist_file_window = "yes"
+        call s:Tlist_Window_Mark_File_Window()
     else
         if v:version >= 700
             " If the file is opened in more than one window, then check
@@ -3249,11 +3341,9 @@ function! s:Tlist_Find_Nearest_Tag_Idx(fidx, linenum)
     let right = s:tlist_{a:fidx}_tag_count
 
     if sort_type == 'order'
-        " Tag list sorted by order, do a binary search comparing the line
-        " numbers and pick a tag entry that contains the current line and
-        " highlight it.  The idea behind this function is taken from the
-        " ctags.vim script (by Alexey Marinichev) available at the Vim online
-        " website.
+        " Tags sorted by order, use a binary search.
+        " The idea behind this function is taken from the ctags.vim script (by
+        " Alexey Marinichev) available at the Vim online website.
 
         " If the current line is the less than the first tag, then no need to
         " search
@@ -3279,7 +3369,12 @@ function! s:Tlist_Find_Nearest_Tag_Idx(fidx, linenum)
             endif
         endwhile
     else
-        " sorted by name, brute force method (Dave Eggum)
+        " Tags sorted by name, use a linear search. (contributed by Dave
+        " Eggum).
+        " Look for a tag with a line number less than or equal to the supplied
+        " line number. If multiple tags are found, then use the tag with the
+        " line number closest to the supplied line number. IOW, use the tag
+        " with the highest line number.
         let closest_lnum = 0
         let final_left = 0
         while left <= right
@@ -3609,9 +3704,7 @@ function! s:Tlist_Session_Load(...)
     endif
 
     " Mark the current window as the file window
-    if bufname('%') !~ g:TagList_title
-        let w:tlist_file_window = "yes"
-    endif
+    call s:Tlist_Window_Mark_File_Window()
 
     " Source the session file
     exe 'source ' . sessionfile
@@ -3915,18 +4008,18 @@ function! s:Tlist_Menu_Add_Base_Menu()
     " Add the menu
     anoremenu <silent> T&ags.Refresh\ menu :call <SID>Tlist_Menu_Refresh()<CR>
     anoremenu <silent> T&ags.Sort\ menu\ by.Name
-                        \ :call <SID>Tlist_Change_Sort(2, 2, 'name')<CR>
+                    \ :call <SID>Tlist_Change_Sort('menu', 'set', 'name')<CR>
     anoremenu <silent> T&ags.Sort\ menu\ by.Order
-                \       :call <SID>Tlist_Change_Sort(2, 2, 'order')<CR>
+                    \ :call <SID>Tlist_Change_Sort('menu', 'set', 'order')<CR>
     anoremenu T&ags.-SEP1-           :
 
     if &mousemodel =~ 'popup'
         anoremenu <silent> PopUp.T&ags.Refresh\ menu
                     \ :call <SID>Tlist_Menu_Refresh()<CR>
         anoremenu <silent> PopUp.T&ags.Sort\ menu\ by.Name
-                  \ :call <SID>Tlist_Change_Sort(2, 2, 'name')<CR>
+                  \ :call <SID>Tlist_Change_Sort('menu', 'set', 'name')<CR>
         anoremenu <silent> PopUp.T&ags.Sort\ menu\ by.Order
-                  \ :call <SID>Tlist_Change_Sort(2, 2, 'order')<CR>
+                  \ :call <SID>Tlist_Change_Sort('menu', 'set', 'order')<CR>
         anoremenu PopUp.T&ags.-SEP1-           :
     endif
 endfunction
@@ -4073,6 +4166,13 @@ function! s:Tlist_Menu_Update_File(clear_menu)
     " Remove the tags menu
     if a:clear_menu
         call s:Tlist_Menu_Remove_File()
+
+    endif
+
+    let fname = escape(fnamemodify(bufname('%'), ':t'), '.')
+    if fname != ''
+        exe 'anoremenu T&ags.' .  fname . ' <Nop>'
+        anoremenu T&ags.-SEP2-           :
     endif
 
     " Skip buffers with 'buftype' set to nofile, nowrite, quickfix or help

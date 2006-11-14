@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2006 September 6
+Last change: 2006 November 14
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -63,7 +63,7 @@ programming languages. The "Tag List" plugin provides the following features:
 
 The home page of the taglist plugin is at:
 >
-	http://www.geocities.com/yegappan/taglist
+	http://vim-taglist.sourceforge.net/
 <
 You can subscribe to the taglist mailing list to post your questions or
 suggestions for improvement or to send bug reports. Visit the following page
@@ -711,9 +711,9 @@ the PATH environment variable, then there is no need to set this variable.
 
 The exuberant ctags tool can be installed under different names.  When the
 taglist plugin starts up, if the 'Tlist_Ctags_Cmd' variable is not set, it
-checks for the names exuberant-ctags, ctags, ctags.exe and tags in the PATH
-environment variable.  If any one of the named executable is found, then the
-Tlist_Ctags_Cmd variable is set to that name.
+checks for the names exuberant-ctags, exctags, ctags, ctags.exe and tags in
+the PATH environment variable.  If any one of the named executable is found,
+then the Tlist_Ctags_Cmd variable is set to that name.
 
 If exuberant ctags is not present in one of the directories specified in the
 PATH environment variable, then set this variable to point to the location of
@@ -1026,9 +1026,9 @@ The taglist plugin provides the following ex-mode commands:
 
 						*:TlistMessages*
 :TlistMessages
-		Display the logged debug messages from the taglist plugin.
-		This command works only when logging to a script-local
-		variable.
+		Display the logged debug messages from the taglist plugin
+		in a window.  This command works only when logging to a
+		script-local variable.
 
 						*:TlistOpen*
 :TlistOpen	Open and jump to the taglist window. Creates the taglist
@@ -1268,6 +1268,7 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
 >
 	:filetype
 <
+   The output of the above command should contain "filetype detection:ON".
    To turn on the filetype detection, add the following line to the .vimrc or
    _vimrc file:
 >
@@ -1288,19 +1289,34 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
    Do you have the |'shellslash'| option set? You can try disabling the
    |'shellslash'| option. When the taglist plugin invokes the exuberant ctags
    utility with the path to the file, if the incorrect slashes are used, then
-   you will see errors. 
+   you will see errors.
+   
+   Check the shell related Vim options values using the following command:
+>
+	:set shell? shellcmdflag? shellpipe?
+	:set shellquote? shellredir? shellxquote?
+<
+   If these options are set in your .vimrc or _vimrc file, try removing those
+   lines.
 
    Are you using a Unix shell in a MS-Windows environment? For example,
    the Unix shell from the MKS-toolkit. Do you have the SHELL environment
    set to point to this shell? You can try resetting the SHELL environment
    variable.
 
+   If you are using a Unix shell on MS-Windows, you should try to use
+   exuberant ctags that is compiled for Unix-like environments so that
+   exuberant ctags will understand path names with forward slash characters.
+
    Is your filetype supported by the exuberant ctags utility? The file types
    supported by the exuberant ctags utility are listed in the ctags help. If a
-   file type is not supported, you have to extend exuberant ctags.
-
-   Run the following command from the shell and see whether you see
-   your tags in the output from exuberant ctags:
+   file type is not supported, you have to extend exuberant ctags. You can use
+   the following command to list the filetypes supported by exuberant ctags:
+>
+	ctags --list-languages
+<
+   Run the following command from the shell prompt and check whether the tags
+   defined in your file are listed in the output from exuberant ctags:
 >
 	ctags -f - --format=2 --excmd=pattern --fields=nks <filename>
 <
