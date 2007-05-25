@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2007 February 18
+Last change: 2007 May 24
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -1413,6 +1413,13 @@ A. Are you using Vim version 6.0 and above? The taglist plugin relies on the
 >
 	let Tlist_Ctags_Cmd='C:\Progra~1\Ctags\ctags.exe'
 <
+   If you are using a cygwin compiled version of exuberant ctags on MS-Windows,
+   make sure that either you have the cygwin compiled sort utility installed
+   and available in your PATH or compile exuberant ctags with internal sort
+   support. Otherwise, when exuberant ctags sorts the tags output by invoking
+   the sort utility, it may end up invoking the MS-Windows version of
+   sort.exe, thereby resulting in failure.
+
 Q. When I try to open the taglist window, I am seeing the following error
    message. How do I fix this problem?
 

@@ -1,8 +1,8 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.3
-" Last Modified: February 18, 2007
-" Copyright: Copyright (C) 2002-2006 Yegappan Lakshmanan
+" Version: 4.4
+" Last Modified: May 24, 2007
+" Copyright: Copyright (C) 2002-2007 Yegappan Lakshmanan
 "            Permission is hereby granted to use and distribute this code,
 "            with or without modifications, provided that this copyright
 "            notice is copied with it. Like anything else that's free,
@@ -1662,7 +1662,7 @@ function! s:Tlist_Window_Init()
         " Close the fold for this buffer when leaving the buffer
         if g:Tlist_File_Fold_Auto_Close
             autocmd BufEnter * silent
-                \ call s:Tlist_Window_Open_File_Fold(expand('<afile>'))
+                \ call s:Tlist_Window_Open_File_Fold(expand('<abuf>'))
         endif
         " Exit Vim itself if only the taglist window is present (optional)
         if g:Tlist_Exit_OnlyWindow
@@ -4012,8 +4012,8 @@ autocmd BufDelete * silent call s:Tlist_Buffer_Removed(expand('<afile>:p'))
 " Tlist_Window_Open_File_Fold
 " Open the fold for the specified file and close the fold for all the
 " other files
-function! s:Tlist_Window_Open_File_Fold(acmd_file)
-    call s:Tlist_Log_Msg('Tlist_Window_Open_File_Fold (' . a:acmd_file . ')')
+function! s:Tlist_Window_Open_File_Fold(acmd_bufnr)
+    call s:Tlist_Log_Msg('Tlist_Window_Open_File_Fold (' . a:acmd_bufnr . ')')
 
     " Make sure the taglist window is present
     let winnum = bufwinnr(g:TagList_title)
@@ -4044,7 +4044,7 @@ function! s:Tlist_Window_Open_File_Fold(acmd_file)
     silent! %foldclose
 
     " Get tag list index of the specified file
-    let fname = fnamemodify(a:acmd_file, ":p")
+    let fname = fnamemodify(bufname(a:acmd_bufnr + 0), ':p')
     if filereadable(fname)
         let fidx = s:Tlist_Get_File_Index(fname)
         if fidx != -1
@@ -4251,12 +4251,6 @@ function! s:Tlist_Menu_Update_File(clear_menu)
 
     endif
 
-    let fname = escape(fnamemodify(bufname('%'), ':t'), '.')
-    if fname != ''
-        exe 'anoremenu T&ags.' .  fname . ' <Nop>'
-        anoremenu T&ags.-SEP2-           :
-    endif
-
     " Skip buffers with 'buftype' set to nofile, nowrite, quickfix or help
     if &buftype != ''
         return
@@ -4283,6 +4277,12 @@ function! s:Tlist_Menu_Update_File(clear_menu)
         if fidx == -1
             return
         endif
+    endif
+
+    let fname = escape(fnamemodify(bufname('%'), ':t'), '.')
+    if fname != ''
+        exe 'anoremenu T&ags.' .  fname . ' <Nop>'
+        anoremenu T&ags.-SEP2-           :
     endif
 
     if !s:tlist_{fidx}_tag_count
