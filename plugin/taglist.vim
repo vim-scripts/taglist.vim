@@ -1,7 +1,7 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.4
-" Last Modified: May 24, 2007
+" Version: 4.5
+" Last Modified: September 21, 2007
 " Copyright: Copyright (C) 2002-2007 Yegappan Lakshmanan
 "            Permission is hereby granted to use and distribute this code,
 "            with or without modifications, provided that this copyright
@@ -84,9 +84,9 @@ if !exists('loaded_taglist')
             " On Debian Linux, exuberant ctags is installed
             " as exuberant-ctags
             let Tlist_Ctags_Cmd = 'exuberant-ctags'
-        elseif executable(' exctags')
+        elseif executable('exctags')
             " On Free-BSD, exuberant ctags is installed as exctags
-            let Tlist_Ctags_ Cmd = 'exctags'
+            let Tlist_Ctags_Cmd = 'exctags'
         elseif executable('ctags')
             let Tlist_Ctags_Cmd = 'ctags'
         elseif executable('ctags.exe')
@@ -953,9 +953,10 @@ function! s:Tlist_FileType_Init(ftype)
     return 1
 endfunction
 
-" Tlist_Get_Filetype
-" Determine the filetype for the specified file
-function! s:Tlist_Get_Filetype(fname)
+" Tlist_Detect_Filetype
+" Determine the filetype for the specified file using the filetypedetect
+" autocmd.
+function! s:Tlist_Detect_Filetype(fname)
     " Ignore the filetype autocommands
     let old_eventignore = &eventignore
     set eventignore=FileType
@@ -980,15 +981,16 @@ endfunction
 " Tlist_Get_Buffer_Filetype
 " Get the filetype for the specified buffer
 function! s:Tlist_Get_Buffer_Filetype(bnum)
+    let buf_ft = getbufvar(a:bnum, '&filetype')
+
     if bufloaded(a:bnum)
         " For loaded buffers, the 'filetype' is already determined
-        return getbufvar(a:bnum, '&filetype')
+        return buf_ft
     endif
 
     " For unloaded buffers, if the 'filetype' option is set, return it
-    let ftype = getbufvar(a:bnum, '&filetype')
-    if ftype != ''
-        return ftype
+    if buf_ft != ''
+        return buf_ft
     endif
 
     " Skip non-existent buffers
@@ -1000,7 +1002,7 @@ function! s:Tlist_Get_Buffer_Filetype(bnum)
     " the filetype
     let bname = bufname(a:bnum)
 
-    return s:Tlist_Get_Filetype(bname)
+    return s:Tlist_Detect_Filetype(bname)
 endfunction
 
 " Tlist_Discard_TagInfo
@@ -1680,6 +1682,9 @@ function! s:Tlist_Window_Init()
             if v:version < 700
                 autocmd WinEnter * call s:Tlist_Window_Check_Width()
             endif
+        endif
+        if v:version >= 700
+            autocmd TabEnter * silent call s:Tlist_Refresh_Folds()
         endif
     augroup end
 
@@ -2564,7 +2569,7 @@ function! s:Tlist_Window_Open()
 
     " Get the filename and filetype for the specified buffer
     let curbuf_name = fnamemodify(bufname('%'), ':p')
-    let curbuf_ftype = getbufvar('%', '&filetype')
+    let curbuf_ftype = s:Tlist_Get_Buffer_Filetype('%')
     let cur_lnum = line('.')
 
     " Mark the current window as the desired window to open a file when a tag
@@ -2654,7 +2659,7 @@ function! s:Tlist_Process_Filelist(file_names)
             continue
         endif
 
-        let ftype = s:Tlist_Get_Filetype(one_file)
+        let ftype = s:Tlist_Detect_Filetype(one_file)
 
         echon "\r                                                              "
         echon "\rProcessing tags for " . fnamemodify(one_file, ':p:t')
@@ -2811,7 +2816,7 @@ function! s:Tlist_Refresh()
     endif
 
     let filename = fnamemodify(bufname('%'), ':p')
-    let ftype = &filetype
+    let ftype = s:Tlist_Get_Buffer_Filetype('%')
 
     " If the file doesn't support tag listing, skip it
     if s:Tlist_Skip_File(filename, ftype)
@@ -2996,7 +3001,8 @@ function! s:Tlist_Update_Current_File()
         if fidx != -1
             let s:tlist_{fidx}_valid = 0
         endif
-        call Tlist_Update_File(filename, &filetype)
+        let ft = s:Tlist_Get_Buffer_Filetype('%')
+        call Tlist_Update_File(filename, ft)
     endif
 endfunction
 
@@ -3959,7 +3965,8 @@ function! s:Tlist_Session_Save(...)
         while j <= s:tlist_{ftype}_count
             let ttype = s:tlist_{ftype}_{j}_name
             if s:tlist_{i}_{ttype}_count != 0
-                let txt = substitute(s:tlist_{i}_{ttype}, "\n", "\\\\n", 'g')
+                let txt = escape(s:tlist_{i}_{ttype}, '"\')
+                let txt = substitute(txt, "\n", "\\\\n", 'g')
                 silent! echo 'let tlist_' . i . '_' . ttype . ' = "' .
                                                 \ txt . '"'
                 silent! echo 'let tlist_' . i . '_' . ttype . '_count = ' .
@@ -4071,7 +4078,8 @@ function! s:Tlist_Window_Check_Auto_Open()
     let buf_num = winbufnr(i)
     while buf_num != -1
         let filename = fnamemodify(bufname(buf_num), ':p')
-        if !s:Tlist_Skip_File(filename, getbufvar(buf_num, '&filetype'))
+        let ft = s:Tlist_Get_Buffer_Filetype(buf_num)
+        if !s:Tlist_Skip_File(filename, ft)
             let open_window = 1
             break
         endif
@@ -4082,6 +4090,48 @@ function! s:Tlist_Window_Check_Auto_Open()
     if open_window
         call s:Tlist_Window_Toggle()
     endif
+endfunction
+
+" Tlist_Refresh_Folds
+" Remove and create the folds for all the files displayed in the taglist
+" window. Used after entering a tab. If this is not done, then the folds
+" are not properly created for taglist windows displayed in multiple tabs.
+function! s:Tlist_Refresh_Folds()
+    let winnum = bufwinnr(g:TagList_title)
+    if winnum == -1
+        return
+    endif
+
+    let save_wnum = winnr()
+    exe winnum . 'wincmd w'
+
+    " First remove all the existing folds
+    normal! zE
+
+    " Create the folds for each in the tag list
+    let fidx = 0
+    while fidx < s:tlist_file_count
+        let ftype = s:tlist_{fidx}_filetype
+
+        " Create the folds for each tag type in a file
+        let j = 1
+        while j <= s:tlist_{ftype}_count
+            let ttype = s:tlist_{ftype}_{j}_name
+            if s:tlist_{fidx}_{ttype}_count
+                let s = s:tlist_{fidx}_start + s:tlist_{fidx}_{ttype}_offset
+                let e = s + s:tlist_{fidx}_{ttype}_count
+                exe s . ',' . e . 'fold'
+            endif
+            let j = j + 1
+        endwhile
+
+        exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'fold'
+        exe 'silent! ' . s:tlist_{fidx}_start . ',' .
+                    \ s:tlist_{fidx}_end . 'foldopen!'
+        let fidx = fidx + 1
+    endwhile
+
+    exe save_wnum . 'wincmd w'
 endfunction
 
 function! s:Tlist_Menu_Add_Base_Menu()
@@ -4257,7 +4307,7 @@ function! s:Tlist_Menu_Update_File(clear_menu)
     endif
 
     let filename = fnamemodify(bufname('%'), ':p')
-    let ftype = &filetype
+    let ftype = s:Tlist_Get_Buffer_Filetype('%')
 
     " If the file doesn't support tag listing, skip it
     if s:Tlist_Skip_File(filename, ftype)
@@ -4464,7 +4514,7 @@ function! TagList_Start()
     let bufnum = WinManagerGetLastEditedFile()
     if bufnum != -1
         let filename = fnamemodify(bufname(bufnum), ':p')
-        let ftype = getbufvar(bufnum, '&filetype')
+        let ftype = s:Tlist_Get_Buffer_Filetype(bufnum)
     endif
 
     " Initialize the taglist window, if it is not already initialized
