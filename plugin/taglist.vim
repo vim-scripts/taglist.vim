@@ -84,6 +84,10 @@ if !exists('loaded_taglist')
             " On Debian Linux, exuberant ctags is installed
             " as exuberant-ctags
             let Tlist_Ctags_Cmd = 'exuberant-ctags'
+        elseif executable('ctags-exuberant')
+            " sometimes it's the other way around (ubuntu)
+            " so added this to avoid a bash alias or some hack
+            let Tlist_Ctags_Cmd = 'ctags-exuberant'
         elseif executable('exctags')
             " On Free-BSD, exuberant ctags is installed as exctags
             let Tlist_Ctags_Cmd = 'exctags'
