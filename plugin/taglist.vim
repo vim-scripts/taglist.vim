@@ -4097,6 +4097,11 @@ endfunction
 " window. Used after entering a tab. If this is not done, then the folds
 " are not properly created for taglist windows displayed in multiple tabs.
 function! s:Tlist_Refresh_Folds()
+
+    if g:Tlist_Show_One_File
+      return
+    endif
+
     let winnum = bufwinnr(g:TagList_title)
     if winnum == -1
         return
