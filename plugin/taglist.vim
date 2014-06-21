@@ -56,6 +56,9 @@
 "
 " ****************** Do not modify after this line ************************
 
+"store pre window's nr
+let s:pre_win_nr = 0
+
 " Line continuation used here
 let s:cpo_save = &cpo
 set cpo&vim
@@ -2522,6 +2525,12 @@ function! s:Tlist_Window_Close()
             " If a window other than the taglist window is open,
             " then only close the taglist window.
             close
+			"jump back to the origin window even if we do nothing but close
+			"the tlist window
+			let winnum = bufwinnr(s:pre_win_nr)
+			if winnr() != winnum
+				exe winnum . 'wincmd w'
+			endif
         endif
     else
         " Goto the taglist window, close it and then come back to the
@@ -2551,6 +2560,7 @@ endfunction
 " Tlist_Window_Open
 " Open and refresh the taglist window
 function! s:Tlist_Window_Open()
+	let s:pre_win_nr = bufnr('%')
     call s:Tlist_Log_Msg('Tlist_Window_Open()')
     " If the window is open, jump to it
     let winnum = bufwinnr(g:TagList_title)
