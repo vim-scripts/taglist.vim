@@ -1,8 +1,8 @@
 " File: taglist.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 4.5
-" Last Modified: September 21, 2007
-" Copyright: Copyright (C) 2002-2007 Yegappan Lakshmanan
+" Version: 4.6
+" Last Modified: Feb 26, 2013
+" Copyright: Copyright (C) 2002-2013 Yegappan Lakshmanan
 "            Permission is hereby granted to use and distribute this code,
 "            with or without modifications, provided that this copyright
 "            notice is copied with it. Like anything else that's free,
@@ -57,7 +57,12 @@
 " ****************** Do not modify after this line ************************
 
 " Line continuation used here
-let s:cpo_save = &cpo
+if !exists('s:cpo_save')
+    " If the taglist plugin is sourced recursively, the 'cpo' setting will be
+    " set to the default value.  To avoid this problem, save the cpo setting
+    " only when the plugin is loaded for the first time.
+    let s:cpo_save = &cpo
+endif
 set cpo&vim
 
 if !exists('loaded_taglist')
@@ -329,6 +334,7 @@ endif
 if !exists('s:tlist_sid')
     " Two or more versions of taglist plugin are installed. Don't
     " load this version of the plugin.
+    let &cpo = s:cpo_save
     finish
 endif
 
@@ -363,17 +369,27 @@ let loaded_taglist = 'available'
 "               tags of this type
 "
 
+" Ant language
+let s:tlist_def_ant_settings = 'ant;p:projects;t:targets'
+
 " assembly language
 let s:tlist_def_asm_settings = 'asm;d:define;l:label;m:macro;t:type'
 
 " aspperl language
-let s:tlist_def_aspperl_settings = 'asp;f:function;s:sub;v:variable'
+let s:tlist_def_aspperl_settings =
+            \ 'asp;c:constants;v:variable;f:function;s:subroutine'
 
 " aspvbs language
-let s:tlist_def_aspvbs_settings = 'asp;f:function;s:sub;v:variable'
+let s:tlist_def_aspvbs_settings =
+            \ 'asp;c:constants;v:variable;f:function;s:subroutine'
 
 " awk language
 let s:tlist_def_awk_settings = 'awk;f:function'
+
+" basic language
+let s:tlist_def_basic_settings =
+            \ 'basic;c:constant;l:label;g:enum;v:variable;' .
+            \ 't:type;f:function'
 
 " beta language
 let s:tlist_def_beta_settings = 'beta;f:fragment;s:slot;v:pattern'
@@ -394,6 +410,12 @@ let s:tlist_def_cs_settings = 'c#;d:macro;t:typedef;n:namespace;c:class;' .
 " cobol language
 let s:tlist_def_cobol_settings = 'cobol;d:data;f:file;g:group;p:paragraph;' .
                                \ 'P:program;s:section'
+" D programming language
+let s:tlist_def_d_settings = 'c++;n:namespace;v:variable;t:typedef;' .
+                        \'c:class;g:enum;s:struct;u:union;f:function'
+
+" Dosbatch
+let s:tlist_def_dosbatch_settings = 'dosbatch;l:labels;v:variables'
 
 " eiffel language
 let s:tlist_def_eiffel_settings = 'eiffel;c:class;f:feature'
@@ -404,20 +426,28 @@ let s:tlist_def_erlang_settings = 'erlang;d:macro;r:record;m:module;f:function'
 " expect (same as tcl) language
 let s:tlist_def_expect_settings = 'tcl;c:class;f:method;p:procedure'
 
+" flex
+let s:tlist_def_flex_settings = 'flex;v:global;c:classes;p:properties;'.
+            \ 'm:methods;f:functions;x:mxtags'
+
 " fortran language
 let s:tlist_def_fortran_settings = 'fortran;p:program;b:block data;' .
                     \ 'c:common;e:entry;i:interface;k:type;l:label;m:module;' .
                     \ 'n:namelist;t:derived;v:variable;f:function;s:subroutine'
 
+" GO language
+let s:tlist_def_go_settings = 'go;f:function;p:package;t:struct'
+
 " HTML language
-let s:tlist_def_html_settings = 'html;a:anchor;f:javascript function'
+let s:tlist_def_html_settings = 'html;a:anchor;f:function'
 
 " java language
 let s:tlist_def_java_settings = 'java;p:package;c:class;i:interface;' .
-                              \ 'f:field;m:method'
+                              \ 'g:enum;f:field;m:method'
 
 " javascript language
-let s:tlist_def_javascript_settings = 'javascript;f:function'
+let s:tlist_def_javascript_settings =
+            \ 'javascript;c:class;m:method;v:global;f:function;p:properties'
 
 " lisp language
 let s:tlist_def_lisp_settings = 'lisp;f:function'
@@ -428,6 +458,13 @@ let s:tlist_def_lua_settings = 'lua;f:function'
 " makefiles
 let s:tlist_def_make_settings = 'make;m:macro'
 
+" Matlab
+let s:tlist_def_matlab_settings = 'matlab;f:function'
+
+" Ocamal
+let s:tlist_def_ocamal_settings = 'ocamal;M:module;v:global;t:type;'.
+            \ 'c:class;f:function;m:method;C:constructor;e:exception'
+
 " pascal language
 let s:tlist_def_pascal_settings = 'pascal;f:function;p:procedure'
 
@@ -435,10 +472,14 @@ let s:tlist_def_pascal_settings = 'pascal;f:function;p:procedure'
 let s:tlist_def_perl_settings = 'perl;c:constant;l:label;p:package;s:subroutine'
 
 " php language
-let s:tlist_def_php_settings = 'php;c:class;d:constant;v:variable;f:function'
+let s:tlist_def_php_settings =
+            \ 'php;c:class;i:interface;d:constant;v:variable;f:function'
 
 " python language
 let s:tlist_def_python_settings = 'python;c:class;m:member;f:function'
+
+" cython language
+let tlist_pyrex_settings='python;c:classe;m:memder;f:function'
 
 " rexx language
 let s:tlist_def_rexx_settings = 'rexx;s:subroutine'
@@ -464,14 +505,27 @@ let s:tlist_def_slang_settings = 'slang;n:namespace;f:function'
 
 " sml language
 let s:tlist_def_sml_settings = 'sml;e:exception;c:functor;s:signature;' .
-                             \ 'r:structure;t:type;v:value;f:function'
+            \ 'r:structure;t:type;v:value;c:functor;f:function'
 
 " sql language
-let s:tlist_def_sql_settings = 'sql;c:cursor;F:field;P:package;r:record;' .
-            \ 's:subtype;t:table;T:trigger;v:variable;f:function;p:procedure'
+let s:tlist_def_sql_settings = 'sql;f:functions;' .
+           \ 'P:packages;p:procedures;t:tables;T:triggers;' .
+           \ 'v:variables;e:events;U:publications;R:services;' .
+           \ 'D:domains;x:MLTableScripts;y:MLConnScripts;z:MLProperties;'.
+           \ 'i:indexes;c:cursors;V:views;'.
+           \ 'd:prototypes;'.
+           \ 'l:local variables;'.
+           \ 'F:record fields;'.
+           \ 'L:block label;'.
+           \ 'r:records;'.
+           \ 's:subtypes'
 
 " tcl language
 let s:tlist_def_tcl_settings = 'tcl;c:class;f:method;m:method;p:procedure'
+
+" Tex
+let s:tlist_def_tex_settings = 'tex;c:chapters;s:sections;u:subsections;'.
+            \ 'b:subsubsections;p:parts;P:paragraphs;G:subparagraphs'
 
 " vera language
 let s:tlist_def_vera_settings = 'vera;c:class;d:macro;e:enumerator;' .
@@ -483,8 +537,12 @@ let s:tlist_def_vera_settings = 'vera;c:class;d:macro;e:enumerator;' .
 let s:tlist_def_verilog_settings = 'verilog;m:module;c:constant;P:parameter;' .
             \ 'e:event;r:register;t:task;w:write;p:port;v:variable;f:function'
 
+" VHDL
+let s:tlist_def_vhdl_settings = 'vhdl;c:constant;t:type;T:subtype;r:record;e:entity;f:function;p:procedure;P:package'
+
 " vim language
-let s:tlist_def_vim_settings = 'vim;a:autocmds;v:variable;f:function'
+let s:tlist_def_vim_settings =
+            \ 'vim;v:variable;a:autocmds;c:commands;m:map;f:function'
 
 " yacc language
 let s:tlist_def_yacc_settings = 'yacc;l:label'
@@ -983,6 +1041,12 @@ endfunction
 function! s:Tlist_Get_Buffer_Filetype(bnum)
     let buf_ft = getbufvar(a:bnum, '&filetype')
 
+    " Check whether 'filetype' contains multiple file types separated by '.'
+    " If it is, then use the first file type
+    if buf_ft =~ '\.'
+        let buf_ft = matchstr(buf_ft, '[^.]\+')
+    endif
+
     if bufloaded(a:bnum)
         " For loaded buffers, the 'filetype' is already determined
         return buf_ft
@@ -1021,6 +1085,7 @@ function! s:Tlist_Discard_TagInfo(fidx)
         unlet! {fidx_i}_tag_type
         unlet! {fidx_i}_ttype_idx
         unlet! {fidx_i}_tag_proto
+        unlet! {fidx_i}_tag_scope
         unlet! {fidx_i}_tag_searchpat
         unlet! {fidx_i}_tag_linenum
         let i = i + 1
@@ -1206,6 +1271,7 @@ function! s:Tlist_Remove_File(file_idx, user_request)
             let s:tlist_{j}_{k}_tag_type = s:Tlist_Get_Tag_Type_By_Tag(i, k)
             let s:tlist_{j}_{k}_ttype_idx = s:tlist_{i}_{k}_ttype_idx
             let s:tlist_{j}_{k}_tag_proto = s:Tlist_Get_Tag_Prototype(i, k)
+            let s:tlist_{j}_{k}_tag_scope = s:Tlist_Get_Tag_Scope(i, k)
             let s:tlist_{j}_{k}_tag_searchpat = s:Tlist_Get_Tag_SearchPat(i, k)
             let s:tlist_{j}_{k}_tag_linenum = s:Tlist_Get_Tag_Linenum(i, k)
             let k = k + 1
@@ -1328,7 +1394,9 @@ function! s:Tlist_Window_Create()
     endif
 
     " Create the taglist window
-    exe 'silent! ' . win_dir . ' ' . win_size . 'split ' . wcmd
+    " Preserve the alternate file
+    let cmd_mod = (v:version >= 700) ? 'keepalt ' : ''
+    exe 'silent! ' . cmd_mod . win_dir . ' ' . win_size . 'split ' . wcmd
 
     " Save the new window position
     let s:tlist_winx = getwinposx()
@@ -1415,19 +1483,24 @@ function! s:Tlist_Window_Exit_Only_Window()
     " the '0 mark is correctly set to the previous buffer.
     if v:version < 700
 	if winbufnr(2) == -1
-	    bdelete
+            bdelete
 	    quit
 	endif
     else
 	if winbufnr(2) == -1
 	    if tabpagenr('$') == 1
 		" Only one tag page is present
-		bdelete
+                "
+                " When deleting the taglist buffer, autocommands cannot be
+                " disabled. If autocommands are disabled, then on exiting Vim,
+                " the window size will not be restored back to the original
+                " size.
+                bdelete
 		quit
 	    else
 		" More than one tab page is present. Close only the current
 		" tab page
-		close
+                close
 	    endif
 	endif
     endif
@@ -1526,6 +1599,9 @@ function! s:Tlist_Window_Init()
     " taglist window. So forcefully disable 'number' option for the taglist
     " window
     silent! setlocal nonumber
+    if exists('&relativenumber')
+        silent! setlocal norelativenumber
+    endif
 
     " Use fixed height when horizontally split window is used
     if g:Tlist_Use_Horiz_Window
@@ -1948,11 +2024,6 @@ function! s:Tlist_Window_Refresh_File(filename, ftype)
 
             let {fidx_ttype}_offset = ttype_start_lnum - file_start
 
-            " create a fold for this tag type
-            let fold_start = ttype_start_lnum
-            let fold_end = fold_start + {fidx_ttype}_count
-            exe fold_start . ',' . fold_end  . 'fold'
-
             " Adjust the cursor position
             if g:Tlist_Compact_Format == 0
                 exe ttype_start_lnum + {fidx_ttype}_count
@@ -1976,10 +2047,7 @@ function! s:Tlist_Window_Refresh_File(filename, ftype)
 
     let s:tlist_{fidx}_end = line('.') - 1
 
-    " Create a fold for the entire file
-    exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'fold'
-    exe 'silent! ' . s:tlist_{fidx}_start . ',' .
-                \ s:tlist_{fidx}_end . 'foldopen!'
+    call s:Tlist_Create_Folds_For_File(fidx)
 
     " Goto the starting line for this file,
     exe s:tlist_{fidx}_start
@@ -2087,6 +2155,25 @@ function! s:Tlist_Get_Tag_Prototype(fidx, tidx)
     return {tproto_var}
 endfunction
 
+" Tlist_Get_Tag_Scope
+" Get the scope (e.g. C++ class) of a tag
+"
+" Tag scope is the last field after the 'line:<num>\t' field
+function! s:Tlist_Get_Tag_Scope(fidx, tidx)
+    let tscope_var = 's:tlist_' . a:fidx . '_' . a:tidx . '_tag_scope'
+
+    " Already parsed and have the tag scope
+    if exists(tscope_var)
+        return {tscope_var}
+    endif
+
+    " Parse and extract the tag scope
+    let tag_line = s:tlist_{a:fidx}_{a:tidx}_tag
+    let {tscope_var} = s:Tlist_Extract_Tag_Scope(tag_line)
+
+    return {tscope_var}
+endfunction
+
 " Tlist_Get_Tag_SearchPat
 function! s:Tlist_Get_Tag_SearchPat(fidx, tidx)
     let tpat_var = 's:tlist_' . a:fidx . '_' . a:tidx . '_tag_searchpat'
@@ -2186,7 +2273,7 @@ function! s:Tlist_Parse_Tagline(tag_line)
         " Add the tag scope, if it is available and is configured. Tag
         " scope is the last field after the 'line:<num>\t' field
         if g:Tlist_Display_Tag_Scope
-            let tag_scope = s:Tlist_Extract_Tag_Scope(a:tag_line)
+            let tag_scope = s:Tlist_Get_Tag_Scope(s:fidx, s:tidx)
             if tag_scope != ''
                 let ttxt = ttxt . ' [' . tag_scope . ']'
             endif
@@ -2275,9 +2362,13 @@ function! s:Tlist_Process_File(filename, ftype)
         " Contributed by: David Fishburn.
         let s:taglist_tempfile = fnamemodify(tempname(), ':h') .
                     \ '\taglist.cmd'
-        exe 'redir! > ' . s:taglist_tempfile
-        silent echo ctags_cmd
-        redir END
+        if v:version >= 700
+            call writefile([ctags_cmd], s:taglist_tempfile, "b")
+        else
+            exe 'redir! > ' . s:taglist_tempfile
+            silent echo ctags_cmd
+            redir END
+        endif
 
         call s:Tlist_Log_Msg('Cmd inside batch file: ' . ctags_cmd)
         let ctags_cmd = '"' . s:taglist_tempfile . '"'
@@ -2401,7 +2492,7 @@ function! s:Tlist_Process_File(filename, ftype)
                 " Add the tag scope, if it is available and is configured. Tag
                 " scope is the last field after the 'line:<num>\t' field
                 if g:Tlist_Display_Tag_Scope
-                    let tag_scope = s:Tlist_Extract_Tag_Scope(one_line)
+                    let tag_scope = s:Tlist_Get_Tag_Scope(fidx, tidx)
                     if tag_scope != ''
                         let ttxt = ttxt . ' [' . tag_scope . ']'
                     endif
@@ -2968,7 +3059,7 @@ function! s:Tlist_Change_Sort(caller, action, sort_type)
 
     if a:caller  == 'cmd'
         " Save the current line for later restoration
-        let curline = '\V\^' . getline('.') . '\$'
+        let curline = '\V\^' . escape(getline('.'), "\\") . '\$'
 
         call s:Tlist_Window_Refresh_File(s:tlist_{fidx}_filename,
                     \   s:tlist_{fidx}_filetype)
@@ -3019,7 +3110,7 @@ function! s:Tlist_Window_Update_File()
     match none
 
     " Save the current line for later restoration
-    let curline = '\V\^' . getline('.') . '\$'
+    let curline = '\V\^' . escape(getline('.'), "\\") . '\$'
 
     let s:tlist_{fidx}_valid = 0
 
@@ -3210,16 +3301,17 @@ function! s:Tlist_Window_Open_File(win_ctrl, filename, tagpat)
             exe "edit " . escape(a:filename, ' ')
         else
             " Open a new window
+            let cmd_mod = (v:version >= 700) ? 'keepalt ' : ''
             if g:Tlist_Use_Horiz_Window
-                exe 'leftabove split ' . escape(a:filename, ' ')
+                exe cmd_mod . 'leftabove split ' . escape(a:filename, ' ')
             else
                 if winbufnr(2) == -1
                     " Only the taglist window is present
                     if g:Tlist_Use_Right_Window
-                        exe 'leftabove vertical split ' .
+                        exe cmd_mod . 'leftabove vertical split ' .
                                     \ escape(a:filename, ' ')
                     else
-                        exe 'rightbelow vertical split ' .
+                        exe cmd_mod . 'rightbelow vertical split ' .
                                     \ escape(a:filename, ' ')
                     endif
 
@@ -3236,7 +3328,7 @@ function! s:Tlist_Window_Open_File(win_ctrl, filename, tagpat)
                 else
                     " A plugin or help window is also present
                     wincmd w
-                    exe 'leftabove split ' . escape(a:filename, ' ')
+                    exe cmd_mod . 'leftabove split ' . escape(a:filename, ' ')
                 endif
             endif
         endif
@@ -3413,7 +3505,8 @@ function! s:Tlist_Window_Show_Info()
     endif
 
     " Get the tag search pattern and display it
-    echo s:Tlist_Get_Tag_Prototype(fidx, tidx)
+    let proto = s:Tlist_Get_Tag_Prototype(fidx, tidx)
+    echo strpart(proto, 0, &columns - 1)
 endfunction
 
 " Tlist_Find_Nearest_Tag_Idx
@@ -3709,7 +3802,33 @@ function! Tlist_Get_Tagname_By_Line(...)
         return ""
     endif
 
-    return s:tlist_{fidx}_{tidx}_tag_name
+    let name = s:tlist_{fidx}_{tidx}_tag_name
+
+    if g:Tlist_Display_Tag_Scope
+        " Add the scope of the tag
+        let tag_scope = s:tlist_{fidx}_{tidx}_tag_scope
+        if tag_scope != ''
+            let name = name . ' [' . tag_scope . ']'
+        endif
+    endif
+
+    return name
+endfunction
+
+" Tlist_Get_Filenames
+" Return the list of file names in the taglist. The names are separated
+" by a newline ('\n')
+function! Tlist_Get_Filenames()
+    let fnames = ''
+
+    let i = 0
+
+    while i < s:tlist_file_count
+        let fnames = fnames . s:tlist_{i}_filename . "\n"
+        let i = i + 1
+    endwhile
+
+    return fnames
 endfunction
 
 " Tlist_Window_Move_To_File
@@ -4092,6 +4211,28 @@ function! s:Tlist_Window_Check_Auto_Open()
     endif
 endfunction
 
+" Tlist_Create_Folds_For_File
+" Create the folds in the taglist window for the specified file
+function! s:Tlist_Create_Folds_For_File(fidx)
+    let ftype = s:tlist_{a:fidx}_filetype
+
+    " Create the folds for each tag type in a file
+    let j = 1
+    while j <= s:tlist_{ftype}_count
+        let ttype = s:tlist_{ftype}_{j}_name
+        if s:tlist_{a:fidx}_{ttype}_count
+            let s = s:tlist_{a:fidx}_start + s:tlist_{a:fidx}_{ttype}_offset
+            let e = s + s:tlist_{a:fidx}_{ttype}_count
+            exe s . ',' . e . 'fold'
+        endif
+        let j = j + 1
+    endwhile
+
+    exe s:tlist_{a:fidx}_start . ',' . s:tlist_{a:fidx}_end . 'fold'
+    exe 'silent! ' . s:tlist_{a:fidx}_start . ',' .
+                \ s:tlist_{a:fidx}_end . 'foldopen!'
+endfunction
+
 " Tlist_Refresh_Folds
 " Remove and create the folds for all the files displayed in the taglist
 " window. Used after entering a tab. If this is not done, then the folds
@@ -4108,28 +4249,18 @@ function! s:Tlist_Refresh_Folds()
     " First remove all the existing folds
     normal! zE
 
-    " Create the folds for each in the tag list
-    let fidx = 0
-    while fidx < s:tlist_file_count
-        let ftype = s:tlist_{fidx}_filetype
-
-        " Create the folds for each tag type in a file
-        let j = 1
-        while j <= s:tlist_{ftype}_count
-            let ttype = s:tlist_{ftype}_{j}_name
-            if s:tlist_{fidx}_{ttype}_count
-                let s = s:tlist_{fidx}_start + s:tlist_{fidx}_{ttype}_offset
-                let e = s + s:tlist_{fidx}_{ttype}_count
-                exe s . ',' . e . 'fold'
-            endif
-            let j = j + 1
+    if g:Tlist_Show_One_File 
+        " If only one file is displayed in the taglist window, then there
+        " is no need to refresh the folds for the tags as the tags for the
+        " current file will be removed anyway.
+    else
+        " Create the folds for each file in the tag list
+        let fidx = 0
+        while fidx < s:tlist_file_count
+            call s:Tlist_Create_Folds_For_File(fidx)
+            let fidx = fidx + 1
         endwhile
-
-        exe s:tlist_{fidx}_start . ',' . s:tlist_{fidx}_end . 'fold'
-        exe 'silent! ' . s:tlist_{fidx}_start . ',' .
-                    \ s:tlist_{fidx}_end . 'foldopen!'
-        let fidx = fidx + 1
-    endwhile
+    endif
 
     exe save_wnum . 'wincmd w'
 endfunction
