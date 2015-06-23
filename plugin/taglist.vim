@@ -2233,7 +2233,7 @@ function! s:Tlist_Process_File(filename, ftype)
     let s:tlist_{fidx}_valid = 1
 
     " Exuberant ctags arguments to generate a tag list
-    let ctags_args = ' -f - --format=2 --excmd=pattern --fields=nks '
+    let ctags_args = ' -f - --append=no --format=2 --excmd=pattern --fields=nks '
 
     " Form the ctags argument depending on the sort type
     if s:tlist_{fidx}_sort_type == 'name'
