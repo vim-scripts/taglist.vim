@@ -2,6 +2,7 @@
 
 This fork supports the following additional features:
 +   Open Taglist Window within an existing vertical split
++       let Tlist_Use_Split_Window = 1
 
 ## The rest are from the original fork:
 
