@@ -1,3 +1,10 @@
+# A Fork of [vim-scripts/taglist.vim](https://github.com/vim-scripts/taglist.vim)
+
+This fork supports the following additional features:
++   Open Taglist Window within an existing vertical split
+
+## The rest are from the original fork:
+
 This is a mirror of http://www.vim.org/scripts/script.php?script_id=273
 
 The "Tag List" plugin is a source code browser plugin for Vim and
