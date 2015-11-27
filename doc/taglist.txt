@@ -2,7 +2,7 @@
 
 Author: Yegappan Lakshmanan  (yegappan AT yahoo DOT com)
 For Vim version 6.0 and above
-Last change: 2007 May 24
+Last change: 2013 Feburary 26
 
 1. Overview 					|taglist-intro|
 2. Taglist on the internet			|taglist-internet|
@@ -760,6 +760,12 @@ loaded. Examples:
 	let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe'
 	let Tlist_Ctags_Cmd = '/usr/local/bin/ctags'
 <
+On Microsoft Windows, if ctags.exe is installed in a directory with space
+characters in the name (e.g. C:\Program Files\ctags\ctags.exe), then you need
+to set the Tlist_Ctags_Cmd variable like this:
+>
+	let Tlist_Ctags_Cmd = '"C:\Program Files\ctags\ctags.exe"'
+<
 						*'Tlist_Display_Prototype'*
 Tlist_Display_Prototype~
 By default, only the tag name will be displayed in the taglist window. If you
@@ -841,6 +847,7 @@ If your terminal doesn't support changing the window width from Vim (older
 version of xterm running in a Unix system) or if you see any weird problems in
 the screen due to the change in the window width or if you prefer not to
 adjust the window width then set the 'Tlist_Inc_Winwidth' variable to zero.
+If you are using GNU Screen, you may want to set this variable to zero.
 CAUTION: If you are using the MS-Windows version of Vim in a MS-DOS command
 window then you must set this variable to zero, otherwise the system may hang
 due to a Vim limitation (explained in :help win32-problems)
@@ -1144,6 +1151,7 @@ The taglist plugin provides several global functions that can be used from
 other Vim plugins to interact with the taglist plugin. These functions are
 described below.
 
+|Tlist_Get_Filenames()|			Return filenames in the taglist
 |Tlist_Update_File_Tags()|		Update the tags for the specified file
 |Tlist_Get_Tag_Prototype_By_Line()|	Return the prototype of the tag at or
 				    	before the specified line number in the
@@ -1153,6 +1161,12 @@ described below.
 					the specified file.
 |Tlist_Set_App()|			Set the name of the application
 					controlling the taglist window.
+
+					    *Tlist_Get_Filenames()*
+Tlist_Get_Filenames()
+		Returns a list of filenames in the taglist. Each filename is
+		separated by a newline (\n) character. If the taglist is empty
+		an empty string is returned.
 
 					    *Tlist_Update_File_Tags()*
 Tlist_Update_File_Tags({filename}, {filetype})
